@@ -8,7 +8,7 @@ Web application per il Quality Control delle foto e configurazione migrazione in
 
 ## 🔗 Accesso
 
-**URL:** [https://federicoluigidorsi.github.io/](https://federicoluigidorsi.github.io/)
+**URL:** [https://federicoluigidorsi.github.io/](https://dirtyproductsmigrator.github.io/)
 
 ---
 
