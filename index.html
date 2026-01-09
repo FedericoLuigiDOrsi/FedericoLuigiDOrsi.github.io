@@ -363,6 +363,10 @@
         .selection-status .item .value {
             color: #e31e24;
             font-weight: 500;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .selection-status .item.selected .value {
@@ -651,7 +655,7 @@
             <h2>Photo QC + Migration</h2>
             <input type="password" id="api-key" placeholder="Airtable API Key" />
             <button onclick="startApp()">Accedi</button>
-            <p>Token con accesso a entrambe le basi</p>
+            <p>Token DirtyTag 2.0</p>
         </div>
 
         <!-- Main App -->
@@ -779,7 +783,7 @@
 
                         <div class="nav-buttons">
                             <button class="nav-btn confirm" id="confirm-btn" onclick="confirmAndMigrate()" disabled>
-                                Conferma e Migra
+                                Conferma
                             </button>
                             <button class="nav-btn skip" onclick="skipSKU()">
                                 Salta SKU
@@ -807,13 +811,11 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // Configuration - DUAL BASE
-        const BASE_OLD = 'apptPbWnDkDkKEpFV';  // DirtyTag 2.0
-        const BASE_NEW = 'apptD8GSxN3vhhivI';  // DirtyTag 3.0
+        // Configuration - SINGLE BASE (DirtyTag 2.0 only)
+        const BASE_ID = 'apptPbWnDkDkKEpFV';
         
-        const PHOTO_CANDIDATES_TABLE = 'tbl7ogfLnHsVfFdzb';  // in BASE_OLD
-        const OLD_INVENTORY_TABLE = 'tblddAcLcQAyk050u';     // in BASE_OLD
-        const PROCESS_QUEUE_TABLE = 'tblV7wZmFvTrHmYYe';     // in BASE_NEW - UPDATE THIS ID
+        const PHOTO_CANDIDATES_TABLE = 'tbl7ogfLnHsVfFdzb';
+        const OLD_INVENTORY_TABLE = 'tblddAcLcQAyk050u';
         
         let API_KEY = '';
         let allRecords = [];
@@ -827,7 +829,7 @@
 
         // Init
         window.onload = function() {
-            const savedKey = localStorage.getItem('dirtytag_api_key');
+            const savedKey = localStorage.getItem('dirtytag_api_key_v2');
             if (savedKey) {
                 document.getElementById('api-key').value = savedKey;
             }
@@ -836,7 +838,10 @@
             document.getElementById('ai-mode').addEventListener('change', function() {
                 document.getElementById('template-group').style.display = 
                     this.value === 'FLAT' ? 'block' : 'none';
+                updateConfirmButton();
             });
+
+            document.getElementById('template-select').addEventListener('change', updateConfirmButton);
         };
 
         function startApp() {
@@ -846,7 +851,7 @@
                 return;
             }
             API_KEY = key;
-            localStorage.setItem('dirtytag_api_key', key);
+            localStorage.setItem('dirtytag_api_key_v2', key);
             
             document.getElementById('login-panel').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
@@ -861,8 +866,8 @@
             setTimeout(() => toast.className = 'toast', 2000);
         }
 
-        async function apiRequest(baseId, table, options = {}) {
-            let url = `https://api.airtable.com/v0/${baseId}/${table}`;
+        async function apiRequest(table, options = {}) {
+            let url = `https://api.airtable.com/v0/${BASE_ID}/${table}`;
             
             if (options.recordId) {
                 url += `/${options.recordId}`;
@@ -908,7 +913,7 @@
                 let offset = null;
                 
                 do {
-                    const data = await apiRequest(BASE_OLD, PHOTO_CANDIDATES_TABLE, { offset });
+                    const data = await apiRequest(PHOTO_CANDIDATES_TABLE, { offset });
                     allRecords = allRecords.concat(data.records);
                     offset = data.offset;
                 } while (offset);
@@ -1093,13 +1098,13 @@
                 const notes = document.getElementById('notes').value;
 
                 // 1. Update PHOTO_CANDIDATES
-                await apiRequest(BASE_OLD, PHOTO_CANDIDATES_TABLE, {
+                await apiRequest(PHOTO_CANDIDATES_TABLE, {
                     recordId: selectedFront,
                     method: 'PATCH',
                     body: { fields: { Is_Front: true, Review_Status: 'ASSIGNED' } }
                 });
 
-                await apiRequest(BASE_OLD, PHOTO_CANDIDATES_TABLE, {
+                await apiRequest(PHOTO_CANDIDATES_TABLE, {
                     recordId: selectedBack,
                     method: 'PATCH',
                     body: { fields: { Is_Back: true, Review_Status: 'ASSIGNED' } }
@@ -1107,7 +1112,7 @@
 
                 for (const photo of currentPhotos) {
                     if (photo.id !== selectedFront && photo.id !== selectedBack) {
-                        await apiRequest(BASE_OLD, PHOTO_CANDIDATES_TABLE, {
+                        await apiRequest(PHOTO_CANDIDATES_TABLE, {
                             recordId: photo.id,
                             method: 'PATCH',
                             body: { fields: { Review_Status: 'ASSIGNED' } }
@@ -1115,57 +1120,42 @@
                     }
                 }
 
-                // 2. Update OLD_INVENTORY
+                // 2. Find and update OLD_INVENTORY with ALL migration data
                 let oldInvRecord = null;
                 let offset = null;
                 do {
-                    const data = await apiRequest(BASE_OLD, OLD_INVENTORY_TABLE, { offset });
+                    const data = await apiRequest(OLD_INVENTORY_TABLE, { offset });
                     oldInvRecord = data.records.find(r => r.fields.SKU === currentSKU);
                     if (oldInvRecord) break;
                     offset = data.offset;
                 } while (offset);
 
                 if (oldInvRecord) {
-                    await apiRequest(BASE_OLD, OLD_INVENTORY_TABLE, {
+                    const updateFields = {
+                        Confirmed_Front_FileId: frontPhoto.fields.FileId,
+                        Confirmed_Back_FileId: backPhoto.fields.FileId,
+                        Photo_Audit_Status: 'COMPLIANT',
+                        Migration_AI_Mode: aiMode,
+                        Migration_Platforms: platforms,
+                        Ready_To_Migrate: true
+                    };
+
+                    // Add template only if FLAT mode
+                    if (aiMode === 'FLAT' && template) {
+                        updateFields.Migration_Template = template;
+                    }
+
+                    // Add notes if present
+                    if (notes) {
+                        updateFields.Migration_Notes = notes;
+                    }
+
+                    await apiRequest(OLD_INVENTORY_TABLE, {
                         recordId: oldInvRecord.id,
                         method: 'PATCH',
-                        body: {
-                            fields: {
-                                Confirmed_Front_FileId: frontPhoto.fields.FileId,
-                                Confirmed_Back_FileId: backPhoto.fields.FileId,
-                                Rename_Approved: true,
-                                Photo_Audit_Status: 'COMPLIANT'
-                            }
-                        }
+                        body: { fields: updateFields }
                     });
                 }
-
-                // 3. Create PROCESS_QUEUE record in new base
-                const processQueueData = {
-                    fields: {
-                        SKU: currentSKU,
-                        Source: 'OLD_INVENTORY',
-                        AI_Mode: aiMode,
-                        Target_Platforms: platforms,
-                        Status_Process: 'PENDING',
-                        Rigenera_Foto: true,
-                        Rigenera_Titolo_Descrizione: true,
-                        Migrate_Trigger: true
-                    }
-                };
-
-                if (aiMode === 'FLAT' && template) {
-                    processQueueData.fields.Template_Selected = template;
-                }
-
-                if (notes) {
-                    processQueueData.fields['Note Operatore'] = notes;
-                }
-
-                await apiRequest(BASE_NEW, PROCESS_QUEUE_TABLE, {
-                    method: 'POST',
-                    body: processQueueData
-                });
 
                 // Update local state
                 for (const photo of currentPhotos) {
@@ -1179,22 +1169,25 @@
                 pendingCount--;
                 updateStatsUI();
                 
-                showToast(`${currentSKU} migrato con successo`);
+                showToast(`${currentSKU} pronto per migrazione`);
                 
-                btn.textContent = 'Conferma e Migra';
+                btn.textContent = 'Conferma';
                 loadNextSKU();
 
             } catch (error) {
                 showError(error.message);
                 btn.disabled = false;
-                btn.textContent = 'Conferma e Migra';
+                btn.textContent = 'Conferma';
             }
         }
 
         async function skipSKU() {
+            const btn = document.querySelector('.nav-btn.skip');
+            btn.textContent = 'Skipping...';
+
             try {
                 for (const photo of currentPhotos) {
-                    await apiRequest(BASE_OLD, PHOTO_CANDIDATES_TABLE, {
+                    await apiRequest(PHOTO_CANDIDATES_TABLE, {
                         recordId: photo.id,
                         method: 'PATCH',
                         body: { fields: { Review_Status: 'SKIPPED' } }
@@ -1208,11 +1201,13 @@
 
                 pendingCount--;
                 updateStatsUI();
-                showToast(`${currentSKU} saltato`, 'error');
+                showToast(`${currentSKU} skippato`, 'error');
+                btn.textContent = 'Salta SKU';
                 loadNextSKU();
 
             } catch (error) {
                 showError(error.message);
+                btn.textContent = 'Salta SKU';
             }
         }
 
@@ -1265,10 +1260,6 @@
                 if (hoveredCard) setBack(hoveredCard.dataset.id);
             }
         });
-
-        // Template validation on AI mode change
-        document.getElementById('ai-mode')?.addEventListener('change', updateConfirmButton);
-        document.getElementById('template-select')?.addEventListener('change', updateConfirmButton);
     </script>
 </body>
 </html>
