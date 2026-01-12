@@ -3,11 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DirtyTag - Photo QC Review</title>
+    <title>DirtyTag — AI Photo QC Review</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --border: #2a2a2a;
+            --border-hover: #3a3a3a;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --accent-red: #e31e24;
+            --accent-red-dim: rgba(227, 30, 36, 0.15);
+            --accent-green: #00d26a;
+            --accent-green-dim: rgba(0, 210, 106, 0.15);
+            --accent-blue: #3b82f6;
+            --accent-blue-dim: rgba(59, 130, 246, 0.15);
+            --accent-orange: #f59e0b;
+            --accent-orange-dim: rgba(245, 158, 11, 0.15);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -15,519 +34,684 @@
         }
 
         body {
-            font-family: 'Roboto Mono', monospace;
-            background: #0a0a0a;
-            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding: 15px;
             font-size: 12px;
+            line-height: 1.5;
         }
 
+        /* Header */
         .header {
-            text-align: center;
-            margin-bottom: 15px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .logo {
-            width: 50px;
-            height: auto;
-            margin-bottom: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
 
-        .header h1 {
-            font-size: 1rem;
-            color: #fff;
-            margin-bottom: 8px;
-            font-weight: 400;
-            letter-spacing: 3px;
+        .logo span {
+            color: var(--accent-red);
+        }
+
+        .module-badge {
+            background: var(--accent-red-dim);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            padding: 4px 10px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 1px;
             text-transform: uppercase;
         }
 
-        .header .sku-badge {
-            display: inline-block;
-            background: #e31e24;
-            color: white;
-            padding: 6px 16px;
+        .sku-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sku-label {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sku-value {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
             font-size: 0.9rem;
             font-weight: 600;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
+            color: var(--text-primary);
         }
 
-        .stats {
+        .header-right {
             display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin-bottom: 12px;
+            align-items: center;
+            gap: 24px;
         }
 
-        .stat {
+        .stats-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-item {
             text-align: center;
         }
 
         .stat-value {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: 700;
-            color: #e31e24;
+            color: var(--accent-red);
         }
 
+        .stat-value.green { color: var(--accent-green); }
+        .stat-value.blue { color: var(--accent-blue); }
+
         .stat-label {
-            font-size: 0.65rem;
-            color: #555;
+            font-size: 0.6rem;
+            color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
+        }
+
+        .progress-container {
+            width: 200px;
         }
 
         .progress-bar {
-            width: 100%;
-            max-width: 300px;
-            height: 3px;
-            background: #1a1a1a;
+            height: 4px;
+            background: var(--bg-tertiary);
             overflow: hidden;
-            margin: 0 auto 12px;
         }
 
         .progress-fill {
             height: 100%;
-            background: #e31e24;
-            transition: width 0.3s;
+            background: linear-gradient(90deg, var(--accent-red), var(--accent-orange));
+            transition: width 0.4s ease;
         }
 
-        .main-container {
+        .progress-text {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        /* Login Panel */
+        .login-panel {
             display: flex;
-            gap: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 60px);
+            padding: 40px;
         }
 
-        .photos-section {
-            flex: 1;
-            min-width: 0;
+        .login-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
         }
 
-        .config-section {
-            width: 280px;
-            flex-shrink: 0;
+        .login-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
 
-        .photo-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 8px;
+        .login-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 30px;
         }
 
-        .photo-card {
-            background: #111;
-            border: 1px solid #222;
-            overflow: hidden;
-            transition: all 0.15s;
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            padding: 12px 14px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-red);
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: var(--accent-red);
+            border: none;
+            padding: 14px 24px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .photo-card:hover {
-            border-color: #444;
+        .btn-primary:hover {
+            background: #c41a1f;
         }
 
-        .photo-card.selected-front {
-            border: 2px solid #e31e24;
-            box-shadow: 0 0 10px rgba(227, 30, 36, 0.3);
+        .btn-primary:disabled {
+            background: var(--bg-tertiary);
+            cursor: not-allowed;
         }
 
-        .photo-card.selected-back {
-            border: 2px solid #fff;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        /* Main App */
+        .main-app {
+            display: none;
+            min-height: calc(100vh - 60px);
         }
 
-        .photo-container {
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* Photo Comparison Section */
+        .photo-section {
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .comparison-column {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+
+        .column-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .column-title.raw { color: var(--accent-blue); }
+        .column-title.ai { color: var(--accent-green); }
+
+        .column-badge {
+            font-size: 0.6rem;
+            padding: 3px 8px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .photo-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+        }
+
+        .photo-slot {
+            background: var(--bg-primary);
+            position: relative;
+        }
+
+        .photo-slot-label {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 4px 8px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 10;
+        }
+
+        .photo-slot-label.front { color: var(--accent-red); }
+        .photo-slot-label.back { color: var(--text-secondary); }
+
+        .photo-image-container {
             position: relative;
             width: 100%;
-            padding-top: 100%;
-            background: #0a0a0a;
+            padding-top: 125%; /* 4:5 aspect ratio */
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            overflow: hidden;
         }
 
-        .photo-container img {
+        .photo-image-container img {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            transition: transform 0.3s;
         }
 
-        .photo-label {
+        .photo-image-container:hover img {
+            transform: scale(1.02);
+        }
+
+        .photo-placeholder {
             position: absolute;
-            top: 4px;
-            right: 4px;
-            padding: 2px 6px;
-            font-weight: 600;
-            font-size: 0.6rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .photo-label.front {
-            background: #e31e24;
-            color: white;
-        }
-
-        .photo-label.back {
-            background: #fff;
-            color: #000;
-        }
-
-        .photo-info {
-            padding: 6px;
-        }
-
-        .photo-filename {
-            font-size: 0.55rem;
-            color: #444;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 4px;
-        }
-
-        .photo-actions {
-            display: flex;
-            gap: 3px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 4px;
-            border: none;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.6rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-transform: uppercase;
-        }
-
-        .btn-front {
-            background: #1a0808;
-            color: #e31e24;
-            border: 1px solid #e31e24;
-        }
-
-        .btn-front:hover, .btn-front.active {
-            background: #e31e24;
-            color: white;
-        }
-
-        .btn-back {
-            background: #1a1a1a;
-            color: #fff;
-            border: 1px solid #fff;
-        }
-
-        .btn-back:hover, .btn-back.active {
-            background: #fff;
-            color: #000;
-        }
-
-        /* Config Panel */
-        .config-panel {
-            background: #111;
-            border: 1px solid #222;
-            padding: 15px;
-            position: sticky;
-            top: 15px;
-        }
-
-        .config-title {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #e31e24;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #222;
-        }
-
-        .config-group {
-            margin-bottom: 15px;
-        }
-
-        .config-label {
-            font-size: 0.65rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-            display: block;
-        }
-
-        .config-select {
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 8px 10px;
-            background: #0a0a0a;
-            border: 1px solid #333;
-            color: #fff;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.75rem;
-            cursor: pointer;
-        }
-
-        .config-select:focus {
-            outline: none;
-            border-color: #e31e24;
-        }
-
-        .config-select option {
-            background: #0a0a0a;
-            color: #fff;
-        }
-
-        .platform-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .platform-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-
-        .platform-checkbox input {
-            display: none;
-        }
-
-        .platform-checkbox .checkmark {
-            width: 16px;
-            height: 16px;
-            border: 1px solid #444;
-            background: #0a0a0a;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.6rem;
-            color: transparent;
-            transition: all 0.15s;
-        }
-
-        .platform-checkbox input:checked + .checkmark {
-            background: #e31e24;
-            border-color: #e31e24;
-            color: #fff;
-        }
-
-        .platform-checkbox span:last-child {
+            color: var(--text-muted);
             font-size: 0.7rem;
-            color: #888;
         }
 
-        .platform-checkbox:hover span:last-child {
-            color: #fff;
+        /* Version History */
+        .version-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
         }
 
-        .config-textarea {
+        .version-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+
+        .version-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-orange);
+        }
+
+        .version-grid {
+            display: flex;
+            gap: 12px;
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .version-card {
+            flex: 0 0 180px;
+            background: var(--bg-primary);
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .version-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .version-card.selected {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 20px var(--accent-orange-dim);
+        }
+
+        .version-card.current {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px var(--accent-green-dim);
+        }
+
+        .version-card-header {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .version-number {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .version-tag {
+            font-size: 0.55rem;
+            padding: 2px 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .version-tag.current {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+        }
+
+        .version-tag.selected {
+            background: var(--accent-orange-dim);
+            color: var(--accent-orange);
+        }
+
+        .version-thumbs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+        }
+
+        .version-thumb {
+            background: var(--bg-tertiary);
+            padding-top: 75%;
+            position: relative;
+        }
+
+        .version-thumb img {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 8px 10px;
-            background: #0a0a0a;
-            border: 1px solid #333;
-            color: #fff;
-            font-family: 'Roboto Mono', monospace;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .no-versions {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .controls-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+
+        .controls-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .controls-subtitle {
             font-size: 0.7rem;
-            resize: vertical;
-            min-height: 60px;
+            color: var(--text-muted);
         }
 
-        .config-textarea:focus {
-            outline: none;
-            border-color: #e31e24;
+        .controls-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
         }
 
-        .selection-status {
-            background: #0a0a0a;
-            padding: 10px;
-            margin-bottom: 15px;
+        .control-section {
+            margin-bottom: 24px;
+        }
+
+        .control-label {
             font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
         }
 
-        .selection-status .item {
+        .info-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 4px;
-            color: #555;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
         }
 
-        .selection-status .item.selected {
-            color: #fff;
+        .info-key {
+            color: var(--text-muted);
+            font-size: 0.7rem;
         }
 
-        .selection-status .item .value {
-            color: #e31e24;
+        .info-value {
+            color: var(--text-primary);
+            font-size: 0.75rem;
             font-weight: 500;
-            max-width: 140px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
-        .selection-status .item.selected .value {
-            color: #4CAF50;
-        }
-
-        .nav-buttons {
+        /* Regeneration Checkboxes */
+        .regen-options {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-top: 15px;
         }
 
-        .nav-btn {
-            padding: 12px;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: none;
+        .regen-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
             cursor: pointer;
-            transition: all 0.15s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            transition: all 0.2s;
         }
 
-        .nav-btn.confirm {
-            background: #e31e24;
+        .regen-checkbox:hover {
+            border-color: var(--border-hover);
+        }
+
+        .regen-checkbox.checked {
+            border-color: var(--accent-red);
+            background: var(--accent-red-dim);
+        }
+
+        .regen-checkbox input {
+            display: none;
+        }
+
+        .checkbox-indicator {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .regen-checkbox.checked .checkbox-indicator {
+            border-color: var(--accent-red);
+            background: var(--accent-red);
+        }
+
+        .checkbox-indicator::after {
+            content: '✓';
             color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.2s;
         }
 
-        .nav-btn.confirm:hover {
-            background: #ff2a30;
+        .regen-checkbox.checked .checkbox-indicator::after {
+            opacity: 1;
         }
 
-        .nav-btn.confirm:disabled {
-            background: #2a0a0a;
-            color: #4a1a1a;
+        .checkbox-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Action Buttons */
+        .controls-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-approve {
+            width: 100%;
+            background: var(--accent-green);
+            border: none;
+            padding: 16px 24px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-approve:hover {
+            background: #00b85c;
+        }
+
+        .btn-approve:disabled {
+            background: var(--bg-tertiary);
             cursor: not-allowed;
         }
 
-        .nav-btn.skip {
+        .btn-regenerate {
+            width: 100%;
             background: transparent;
-            color: #555;
-            border: 1px solid #333;
-        }
-
-        .nav-btn.skip:hover {
-            background: #1a1a1a;
-            color: #888;
-        }
-
-        .keyboard-hints {
-            margin-top: 12px;
-            font-size: 0.55rem;
-            color: #333;
-            text-align: center;
-        }
-
-        .keyboard-hints kbd {
-            background: #1a1a1a;
-            padding: 2px 5px;
-            margin: 0 2px;
-            border: 1px solid #333;
-        }
-
-        /* Loading & States */
-        .loading {
-            text-align: center;
-            padding: 60px;
-        }
-
-        .loading-spinner {
-            width: 30px;
-            height: 30px;
-            border: 2px solid #1a1a1a;
-            border-top-color: #e31e24;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        .loading p {
-            color: #444;
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px;
-        }
-
-        .empty-state h2 {
-            color: #e31e24;
-            font-size: 1rem;
-            font-weight: 400;
-            margin-bottom: 10px;
-        }
-
-        .empty-state p {
-            color: #444;
-            font-size: 0.75rem;
-        }
-
-        .error {
-            background: #1a0808;
-            border: 1px solid #e31e24;
-            color: #ff6b6b;
-            padding: 20px;
-            text-align: center;
-            margin: 20px auto;
-            max-width: 500px;
-        }
-
-        .error h3 {
-            color: #e31e24;
+            border: 2px solid var(--accent-red);
+            padding: 14px 24px;
+            color: var(--accent-red);
+            font-family: inherit;
             font-size: 0.8rem;
-            margin-bottom: 10px;
-        }
-
-        .error pre {
-            text-align: left;
-            background: #0a0505;
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 0.6rem;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            color: #666;
-        }
-
-        .error button {
-            margin-top: 15px;
-            padding: 8px 20px;
-            background: #e31e24;
-            color: white;
-            border: none;
-            font-family: 'Roboto Mono', monospace;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-regenerate:hover {
+            background: var(--accent-red-dim);
+        }
+
+        .btn-regenerate:disabled {
+            border-color: var(--bg-tertiary);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .btn-skip {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--border);
+            padding: 12px 24px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-skip:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
         }
 
         /* Modal */
         .modal {
-            display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 1000;
-            justify-content: center;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
             align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
         }
 
         .modal.active {
-            display: flex;
+            opacity: 1;
+            visibility: visible;
         }
 
         .modal img {
@@ -540,262 +724,284 @@
             position: absolute;
             top: 20px;
             right: 30px;
-            font-size: 1.5rem;
+            font-size: 2rem;
             color: white;
             cursor: pointer;
         }
 
-        /* Login */
-        .login-panel {
-            background: #111;
-            border: 1px solid #222;
-            padding: 30px;
-            margin: 100px auto;
-            max-width: 350px;
-        }
-
-        .login-panel .logo-login {
-            width: 60px;
-            margin: 0 auto 20px;
-            display: block;
-        }
-
-        .login-panel h2 {
-            text-align: center;
-            font-weight: 400;
-            letter-spacing: 3px;
-            margin-bottom: 25px;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            color: #888;
-        }
-
-        .login-panel input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #333;
-            background: #0a0a0a;
-            color: #fff;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.75rem;
-            margin-bottom: 15px;
-        }
-
-        .login-panel input:focus {
-            outline: none;
-            border-color: #e31e24;
-        }
-
-        .login-panel button {
-            width: 100%;
-            padding: 12px;
-            background: #e31e24;
-            color: white;
-            border: none;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .login-panel button:hover {
-            background: #ff2a30;
-        }
-
-        .login-panel p {
-            margin-top: 15px;
-            font-size: 0.6rem;
-            color: #444;
-            text-align: center;
-        }
-
-        /* Toast notification */
+        /* Toast */
         .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
-            transform: translateX(-50%);
-            background: #1a1a1a;
-            border: 1px solid #333;
-            padding: 12px 24px;
-            font-size: 0.75rem;
-            color: #fff;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 14px 28px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: all 0.3s;
             z-index: 1001;
-            display: none;
-        }
-
-        .toast.success {
-            border-color: #4CAF50;
-            color: #4CAF50;
-        }
-
-        .toast.error {
-            border-color: #e31e24;
-            color: #e31e24;
         }
 
         .toast.show {
-            display: block;
-            animation: fadeInOut 2s ease;
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
         }
 
-        @keyframes fadeInOut {
-            0%, 100% { opacity: 0; }
-            10%, 90% { opacity: 1; }
+        .toast.success {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .toast.error {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .toast.info {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            gap: 16px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 40px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .empty-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--accent-green);
+        }
+
+        .empty-text {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Keyboard Hints */
+        .keyboard-hints {
+            display: flex;
+            gap: 16px;
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-primary);
+        }
+
+        .hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .hint kbd {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 2px 6px;
+            font-family: inherit;
+        }
+
+        /* Error */
+        .error-container {
+            padding: 40px;
+            text-align: center;
+        }
+
+        .error-title {
+            color: var(--accent-red);
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        .error-message {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: left;
+            overflow-x: auto;
+        }
+
+        .btn-retry {
+            background: var(--accent-red);
+            border: none;
+            padding: 12px 24px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div id="app">
-        <!-- Login Panel -->
-        <div id="login-panel" class="login-panel">
-            <img src="https://raw.githubusercontent.com/FedericoLuigiDOrsi/dirtytag-system/main/assets/logo.png" alt="DirtyTag" class="logo-login" onerror="this.style.display='none'">
-            <h2>Photo QC + Migration</h2>
-            <input type="password" id="api-key" placeholder="Airtable API Key" />
-            <button onclick="startApp()">Accedi</button>
-            <p>Token DirtyTag 2.0</p>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo-section">
+                <div class="logo">DIRTY<span>TAG</span></div>
+                <div class="module-badge">AI Photo QC</div>
+            </div>
+            <div class="sku-display" id="sku-display" style="display: none;">
+                <span class="sku-label">SKU</span>
+                <span class="sku-value" id="current-sku">—</span>
+            </div>
         </div>
-
-        <!-- Main App -->
-        <div id="main-app" style="display: none;">
-            <div class="header">
-                <img src="https://raw.githubusercontent.com/FedericoLuigiDOrsi/dirtytag-system/main/assets/logo.png" alt="DirtyTag" class="logo" onerror="this.style.display='none'">
-                <h1>Photo QC + Migration</h1>
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-value" id="stat-pending">-</div>
-                        <div class="stat-label">Da Fare</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value" id="stat-done">-</div>
-                        <div class="stat-label">Completati</div>
-                    </div>
+        <div class="header-right" id="header-stats" style="display: none;">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-pending">0</div>
+                    <div class="stat-label">Da Verificare</div>
                 </div>
+                <div class="stat-item">
+                    <div class="stat-value green" id="stat-approved">0</div>
+                    <div class="stat-label">Approvati</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value blue" id="stat-regen">0</div>
+                    <div class="stat-label">Rigenerati</div>
+                </div>
+            </div>
+            <div class="progress-container">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
                 </div>
-                <div class="sku-badge" id="current-sku">CARICAMENTO</div>
+                <div class="progress-text" id="progress-text">0% completato</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login Panel -->
+    <div class="login-panel" id="login-panel">
+        <div class="login-card">
+            <h1 class="login-title">AI Photo QC Review</h1>
+            <p class="login-subtitle">Sistema di quality check per foto AI-generated</p>
+            
+            <div class="form-group">
+                <label class="form-label">Airtable API Key</label>
+                <input type="password" class="form-input" id="api-key" placeholder="pat...">
+            </div>
+            
+            <button class="btn-primary" onclick="startApp()">Avvia Review</button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="main-app" id="main-app">
+        <div class="app-container">
+            <!-- Photo Section -->
+            <div class="photo-section" id="photo-section">
+                <!-- Content loaded dynamically -->
             </div>
 
-            <div class="main-container">
-                <div class="photos-section">
-                    <div id="content">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            <p>Caricamento...</p>
+            <!-- Controls Panel -->
+            <div class="controls-panel">
+                <div class="controls-header">
+                    <div class="controls-title">Quality Check</div>
+                    <div class="controls-subtitle">Verifica e approva le foto AI</div>
+                </div>
+
+                <div class="controls-body">
+                    <div class="control-section">
+                        <div class="control-label">Informazioni Prodotto</div>
+                        <div class="info-grid" id="product-info">
+                            <!-- Loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <div class="control-label">Versione Visualizzata</div>
+                        <div class="info-grid">
+                            <div class="info-row">
+                                <span class="info-key">Versione</span>
+                                <span class="info-value" id="viewing-version">v1</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-key">Generazioni Tot.</span>
+                                <span class="info-value" id="total-versions">1</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <div class="control-label">Rigenerazione Selettiva</div>
+                        <div class="regen-options">
+                            <label class="regen-checkbox" id="regen-front-box" onclick="toggleRegenOption('front')">
+                                <input type="checkbox" id="regen-front">
+                                <span class="checkbox-indicator"></span>
+                                <span class="checkbox-label">Rigenera FRONT</span>
+                            </label>
+                            <label class="regen-checkbox" id="regen-back-box" onclick="toggleRegenOption('back')">
+                                <input type="checkbox" id="regen-back">
+                                <span class="checkbox-indicator"></span>
+                                <span class="checkbox-label">Rigenera BACK</span>
+                            </label>
                         </div>
                     </div>
                 </div>
 
-                <div class="config-section">
-                    <div class="config-panel">
-                        <div class="config-title">Configurazione</div>
+                <div class="controls-footer">
+                    <button class="btn-approve" id="btn-approve" onclick="approvePhotos()">
+                        ✓ Approva Versione
+                    </button>
+                    <button class="btn-regenerate" id="btn-regenerate" onclick="triggerRegeneration()" disabled>
+                        ↻ Rigenera Selezionate
+                    </button>
+                    <button class="btn-skip" onclick="skipProduct()">
+                        Salta Prodotto →
+                    </button>
+                </div>
 
-                        <div class="selection-status">
-                            <div class="item" id="status-front">
-                                <span>FRONT</span>
-                                <span class="value">—</span>
-                            </div>
-                            <div class="item" id="status-back">
-                                <span>BACK</span>
-                                <span class="value">—</span>
-                            </div>
-                        </div>
-
-                        <div class="config-group">
-                            <label class="config-label">AI Mode</label>
-                            <select id="ai-mode" class="config-select">
-                                <option value="MANI">MANI</option>
-                                <option value="WORN">WORN</option>
-                                <option value="FLAT">FLAT</option>
-                            </select>
-                        </div>
-
-                        <div class="config-group" id="template-group" style="display: none;">
-                            <label class="config-label">Template</label>
-                            <select id="template-select" class="config-select">
-                                <option value="">Seleziona...</option>
-                                <option value="Piumino">Piumino</option>
-                                <option value="Parka">Parka</option>
-                                <option value="Trench">Trench</option>
-                                <option value="Bomber">Bomber</option>
-                                <option value="Giacca Tecnica">Giacca Tecnica</option>
-                                <option value="Giacca in Pelle">Giacca in Pelle</option>
-                                <option value="Cappotto">Cappotto</option>
-                                <option value="Maglioncino">Maglioncino</option>
-                                <option value="Maglione Girocollo">Maglione Girocollo</option>
-                                <option value="Felpa con Zip">Felpa con Zip</option>
-                                <option value="Felpa Girocollo">Felpa Girocollo</option>
-                                <option value="Felpa con Cappuccio">Felpa con Cappuccio</option>
-                                <option value="Cardigan">Cardigan</option>
-                                <option value="Pantaloni regular">Pantaloni regular</option>
-                                <option value="Pantaloni slim / Skinny">Pantaloni slim / Skinny</option>
-                                <option value="Pantaloni Baggy">Pantaloni Baggy</option>
-                                <option value="Pantaloncini">Pantaloncini</option>
-                                <option value="Gonna">Gonna</option>
-                                <option value="Camicia">Camicia</option>
-                                <option value="Camicia mezze maniche">Camicia mezze maniche</option>
-                                <option value="Polo">Polo</option>
-                                <option value="Tshirt">Tshirt</option>
-                                <option value="Maglietta maniche lunghe">Maglietta maniche lunghe</option>
-                                <option value="Blazer">Blazer</option>
-                                <option value="Completo Pantaloni">Completo Pantaloni</option>
-                                <option value="Completo Gonna">Completo Gonna</option>
-                                <option value="Abito lungo">Abito lungo</option>
-                                <option value="Abito Corto">Abito Corto</option>
-                                <option value="Smanicato">Smanicato</option>
-                                <option value="Giacca di jeans">Giacca di jeans</option>
-                                <option value="Shearling">Shearling</option>
-                                <option value="Pelliccia">Pelliccia</option>
-                                <option value="Workjacket">Workjacket</option>
-                                <option value="Tracksuit">Tracksuit</option>
-                                <option value="Canotta">Canotta</option>
-                            </select>
-                        </div>
-
-                        <div class="config-group">
-                            <label class="config-label">Piattaforme</label>
-                            <div class="platform-grid">
-                                <label class="platform-checkbox">
-                                    <input type="checkbox" id="platform-vinted" checked>
-                                    <span class="checkmark">✓</span>
-                                    <span>Vinted</span>
-                                </label>
-                                <label class="platform-checkbox">
-                                    <input type="checkbox" id="platform-vestiaire" checked>
-                                    <span class="checkmark">✓</span>
-                                    <span>Vestiaire</span>
-                                </label>
-                                <label class="platform-checkbox">
-                                    <input type="checkbox" id="platform-catawiki" checked>
-                                    <span class="checkmark">✓</span>
-                                    <span>Catawiki</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="config-group">
-                            <label class="config-label">Note (opzionale)</label>
-                            <textarea id="notes" class="config-textarea" placeholder="Note per l'operatore..."></textarea>
-                        </div>
-
-                        <div class="nav-buttons">
-                            <button class="nav-btn confirm" id="confirm-btn" onclick="confirmAndMigrate()" disabled>
-                                Conferma
-                            </button>
-                            <button class="nav-btn skip" onclick="skipSKU()">
-                                Salta SKU
-                            </button>
-                        </div>
-
-                        <div class="keyboard-hints">
-                            <kbd>F</kbd> Front
-                            <kbd>B</kbd> Back
-                            <kbd>Enter</kbd> Conferma
-                        </div>
-                    </div>
+                <div class="keyboard-hints">
+                    <div class="hint"><kbd>A</kbd> Approva</div>
+                    <div class="hint"><kbd>R</kbd> Rigenera</div>
+                    <div class="hint"><kbd>→</kbd> Salta</div>
+                    <div class="hint"><kbd>1-9</kbd> Versione</div>
                 </div>
             </div>
         </div>
@@ -811,59 +1017,48 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // Configuration - SINGLE BASE (DirtyTag 2.0 only)
-        const BASE_ID = 'apptPbWnDkDkKEpFV';
-        
-        const PHOTO_CANDIDATES_TABLE = 'tbl7ogfLnHsVfFdzb';
-        const OLD_INVENTORY_TABLE = 'tblddAcLcQAyk050u';
+        // Configuration - DirtyTag 3.0
+        const BASE_ID = 'apptD8GSxN3vhhivI';
+        const INVENTARIO_TABLE = 'tblddAcLcQAyk050u';
         
         let API_KEY = '';
         let allRecords = [];
         let pendingRecords = [];
-        let currentSKU = null;
-        let currentPhotos = [];
-        let selectedFront = null;
-        let selectedBack = null;
-        let pendingCount = 0;
-        let doneCount = 0;
+        let currentRecord = null;
+        let currentVersions = [];
+        let selectedVersion = null;
+        let stats = { pending: 0, approved: 0, regenerated: 0 };
 
         // Init
         window.onload = function() {
-            const savedKey = localStorage.getItem('dirtytag_api_key_v2');
+            const savedKey = localStorage.getItem('dirtytag_api_key_v3');
             if (savedKey) {
                 document.getElementById('api-key').value = savedKey;
             }
-
-            // AI Mode change handler
-            document.getElementById('ai-mode').addEventListener('change', function() {
-                document.getElementById('template-group').style.display = 
-                    this.value === 'FLAT' ? 'block' : 'none';
-                updateConfirmButton();
-            });
-
-            document.getElementById('template-select').addEventListener('change', updateConfirmButton);
         };
 
         function startApp() {
             const key = document.getElementById('api-key').value.trim();
             if (!key) {
-                alert('Inserisci la chiave API');
+                showToast('Inserisci la chiave API', 'error');
                 return;
             }
             API_KEY = key;
-            localStorage.setItem('dirtytag_api_key_v2', key);
+            localStorage.setItem('dirtytag_api_key_v3', key);
             
             document.getElementById('login-panel').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
+            document.getElementById('sku-display').style.display = 'flex';
+            document.getElementById('header-stats').style.display = 'flex';
             
-            loadAllRecords();
+            loadPendingRecords();
         }
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = `toast ${type} show`;
-            setTimeout(() => toast.className = 'toast', 2000);
+            setTimeout(() => toast.className = 'toast', 2500);
         }
 
         async function apiRequest(table, options = {}) {
@@ -872,8 +1067,24 @@
             if (options.recordId) {
                 url += `/${options.recordId}`;
             }
+            
+            const params = new URLSearchParams();
+            if (options.filterByFormula) {
+                params.append('filterByFormula', options.filterByFormula);
+            }
+            if (options.sort) {
+                options.sort.forEach((s, i) => {
+                    params.append(`sort[${i}][field]`, s.field);
+                    params.append(`sort[${i}][direction]`, s.direction || 'asc');
+                });
+            }
             if (options.offset) {
-                url += `?offset=${options.offset}`;
+                params.append('offset', options.offset);
+            }
+            
+            const queryString = params.toString();
+            if (queryString) {
+                url += `?${queryString}`;
             }
 
             const fetchOptions = {
@@ -900,35 +1111,31 @@
             return data;
         }
 
-        async function loadAllRecords() {
-            document.getElementById('content').innerHTML = `
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>Caricamento record...</p>
-                </div>
-            `;
+        async function loadPendingRecords() {
+            showLoading('Caricamento prodotti in attesa di QC...');
 
             try {
                 allRecords = [];
                 let offset = null;
                 
+                // Filter: AI_Quality_Check = PENDING
+                const formula = "{AI_Quality_Check} = 'PENDING'";
+                
                 do {
-                    const data = await apiRequest(PHOTO_CANDIDATES_TABLE, { offset });
+                    const data = await apiRequest(INVENTARIO_TABLE, { 
+                        filterByFormula: formula,
+                        sort: [{ field: 'SKU', direction: 'asc' }],
+                        offset 
+                    });
                     allRecords = allRecords.concat(data.records);
                     offset = data.offset;
                 } while (offset);
 
-                pendingRecords = allRecords.filter(r => r.fields.Review_Status === 'PENDING');
-                const assignedRecords = allRecords.filter(r => r.fields.Review_Status === 'ASSIGNED');
-
-                const pendingSKUs = [...new Set(pendingRecords.map(r => r.fields.SKU).filter(Boolean))];
-                const assignedSKUs = [...new Set(assignedRecords.map(r => r.fields.SKU).filter(Boolean))];
-
-                pendingCount = pendingSKUs.length;
-                doneCount = assignedSKUs.length;
-
+                pendingRecords = allRecords;
+                stats.pending = pendingRecords.length;
                 updateStatsUI();
-                loadNextSKU();
+                
+                loadNextProduct();
 
             } catch (error) {
                 showError(error.message);
@@ -936,282 +1143,457 @@
         }
 
         function updateStatsUI() {
-            document.getElementById('stat-pending').textContent = pendingCount;
-            document.getElementById('stat-done').textContent = doneCount;
+            document.getElementById('stat-pending').textContent = stats.pending;
+            document.getElementById('stat-approved').textContent = stats.approved;
+            document.getElementById('stat-regen').textContent = stats.regenerated;
             
-            const total = pendingCount + doneCount;
-            const progress = total > 0 ? (doneCount / total) * 100 : 0;
+            const total = stats.pending + stats.approved + stats.regenerated;
+            const progress = total > 0 ? ((stats.approved + stats.regenerated) / total) * 100 : 0;
             document.getElementById('progress-fill').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${Math.round(progress)}% completato`;
         }
 
-        function loadNextSKU() {
-            selectedFront = null;
-            selectedBack = null;
-            updateSelectionStatus();
+        function loadNextProduct() {
+            // Reset UI
+            document.getElementById('regen-front').checked = false;
+            document.getElementById('regen-back').checked = false;
+            document.getElementById('regen-front-box').classList.remove('checked');
+            document.getElementById('regen-back-box').classList.remove('checked');
+            updateRegenButton();
 
-            // Reset form
-            document.getElementById('ai-mode').value = 'MANI';
-            document.getElementById('template-group').style.display = 'none';
-            document.getElementById('template-select').value = '';
-            document.getElementById('platform-vinted').checked = true;
-            document.getElementById('platform-vestiaire').checked = true;
-            document.getElementById('platform-catawiki').checked = true;
-            document.getElementById('notes').value = '';
-
-            pendingRecords = allRecords.filter(r => r.fields.Review_Status === 'PENDING');
-            
             if (pendingRecords.length === 0) {
                 showEmptyState();
                 return;
             }
 
-            currentSKU = pendingRecords[0].fields.SKU;
-            document.getElementById('current-sku').textContent = currentSKU;
-
-            currentPhotos = pendingRecords.filter(r => r.fields.SKU === currentSKU);
+            currentRecord = pendingRecords[0];
+            const fields = currentRecord.fields;
             
-            renderPhotos();
+            document.getElementById('current-sku').textContent = fields.SKU || '—';
+            
+            // Load product info
+            renderProductInfo(fields);
+            
+            // Build version structure and render photos
+            buildVersionsAndRender(fields);
         }
 
-        function renderPhotos() {
-            const container = document.getElementById('content');
+        function renderProductInfo(fields) {
+            const container = document.getElementById('product-info');
+            container.innerHTML = `
+                <div class="info-row">
+                    <span class="info-key">Brand</span>
+                    <span class="info-value">${fields.Brand || '—'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Categoria</span>
+                    <span class="info-value">${fields.Category || '—'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">AI Mode</span>
+                    <span class="info-value">${fields.AI_Mode_Selected || 'MANI'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Status</span>
+                    <span class="info-value">${fields.AI_Status || '—'}</span>
+                </div>
+            `;
+        }
+
+        function buildVersionsAndRender(fields) {
+            const sku = fields.SKU;
+            const folderUrl = fields.RAW_Folder_URL || '';
+            const folderId = fields.RAW_FolderID || '';
+            const regenCount = fields.AI_Regeneration_Count || 1;
             
-            if (currentPhotos.length === 0) {
-                loadNextSKU();
-                return;
+            // Current AI photo links
+            const aiFrontLink = fields.AI_Front_Image_Link || '';
+            const aiBackLink = fields.AI_Back_Image_Link || '';
+            
+            // Build versions array
+            currentVersions = [];
+            for (let i = 1; i <= regenCount; i++) {
+                currentVersions.push({
+                    version: i,
+                    label: `v${i}`,
+                    isCurrent: i === regenCount,
+                    // For current version, use the stored links
+                    // For previous versions, we'll use placeholder (can't easily reconstruct)
+                    frontUrl: i === regenCount ? aiFrontLink : null,
+                    backUrl: i === regenCount ? aiBackLink : null
+                });
+            }
+            
+            // Select latest version by default
+            selectedVersion = currentVersions.length > 0 ? currentVersions[currentVersions.length - 1] : null;
+            
+            document.getElementById('viewing-version').textContent = selectedVersion ? selectedVersion.label : '—';
+            document.getElementById('total-versions').textContent = regenCount;
+            
+            renderPhotoSection(fields);
+        }
+
+        function renderPhotoSection(fields) {
+            const container = document.getElementById('photo-section');
+            const sku = fields.SKU;
+            
+            // RAW photo URLs (from Drive folder)
+            // These are constructed from the folder structure
+            const folderId = fields.RAW_FolderID || '';
+            
+            // For RAW photos, we need to list them or use known naming convention
+            // Since we can't list Drive from frontend, we'll use the thumbnail API with guessed file names
+            // This is a limitation - in production, these URLs should come from Airtable fields
+            
+            // Current AI photos
+            const aiFront = selectedVersion?.frontUrl || '';
+            const aiBack = selectedVersion?.backUrl || '';
+            
+            // Extract file IDs from Google Drive links if possible
+            const aiFrontId = extractDriveFileId(aiFront);
+            const aiBackId = extractDriveFileId(aiBack);
+            
+            // For RAW, we'd need stored links - let's check if they exist in fields
+            // If not, show placeholder
+            const rawFrontUrl = fields.RAW_Front_URL || '';
+            const rawBackUrl = fields.RAW_Back_URL || '';
+            const rawFrontId = extractDriveFileId(rawFrontUrl);
+            const rawBackId = extractDriveFileId(rawBackUrl);
+
+            container.innerHTML = `
+                <div class="comparison-grid">
+                    <!-- RAW Column -->
+                    <div class="comparison-column">
+                        <div class="column-header">
+                            <span class="column-title raw">◆ RAW Originali</span>
+                            <span class="column-badge">Input</span>
+                        </div>
+                        <div class="photo-pair">
+                            <div class="photo-slot">
+                                <span class="photo-slot-label front">Front</span>
+                                <div class="photo-image-container" onclick="openModal('${rawFrontId ? `https://drive.google.com/thumbnail?id=${rawFrontId}&sz=w1200` : ''}')">
+                                    ${rawFrontId 
+                                        ? `<img src="https://drive.google.com/thumbnail?id=${rawFrontId}&sz=w600" alt="RAW Front">` 
+                                        : `<div class="photo-placeholder">RAW non disponibile</div>`
+                                    }
+                                </div>
+                            </div>
+                            <div class="photo-slot">
+                                <span class="photo-slot-label back">Back</span>
+                                <div class="photo-image-container" onclick="openModal('${rawBackId ? `https://drive.google.com/thumbnail?id=${rawBackId}&sz=w1200` : ''}')">
+                                    ${rawBackId 
+                                        ? `<img src="https://drive.google.com/thumbnail?id=${rawBackId}&sz=w600" alt="RAW Back">` 
+                                        : `<div class="photo-placeholder">RAW non disponibile</div>`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Column -->
+                    <div class="comparison-column">
+                        <div class="column-header">
+                            <span class="column-title ai">◆ AI Generated</span>
+                            <span class="column-badge">${selectedVersion?.label || 'v?'}</span>
+                        </div>
+                        <div class="photo-pair">
+                            <div class="photo-slot">
+                                <span class="photo-slot-label front">Front</span>
+                                <div class="photo-image-container" onclick="openModal('${aiFrontId ? `https://drive.google.com/thumbnail?id=${aiFrontId}&sz=w1200` : ''}')">
+                                    ${aiFrontId 
+                                        ? `<img src="https://drive.google.com/thumbnail?id=${aiFrontId}&sz=w600" alt="AI Front">` 
+                                        : `<div class="photo-placeholder">AI non disponibile</div>`
+                                    }
+                                </div>
+                            </div>
+                            <div class="photo-slot">
+                                <span class="photo-slot-label back">Back</span>
+                                <div class="photo-image-container" onclick="openModal('${aiBackId ? `https://drive.google.com/thumbnail?id=${aiBackId}&sz=w1200` : ''}')">
+                                    ${aiBackId 
+                                        ? `<img src="https://drive.google.com/thumbnail?id=${aiBackId}&sz=w600" alt="AI Back">` 
+                                        : `<div class="photo-placeholder">AI non disponibile</div>`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Version History -->
+                <div class="version-section">
+                    <div class="version-header">
+                        <span class="version-title">↳ Storico Versioni</span>
+                        <span class="column-badge">${currentVersions.length} versioni</span>
+                    </div>
+                    ${renderVersionHistory(aiFrontId, aiBackId)}
+                </div>
+            `;
+        }
+
+        function renderVersionHistory(currentFrontId, currentBackId) {
+            if (currentVersions.length === 0) {
+                return '<div class="no-versions">Nessuna versione disponibile</div>';
             }
 
-            let html = '<div class="photo-grid">';
+            let html = '<div class="version-grid">';
             
-            currentPhotos.forEach((photo, index) => {
-                const fileId = photo.fields.FileId;
-                const filename = photo.fields.Filename;
-                const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`;
-                const fullUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+            currentVersions.forEach((v, index) => {
+                const isSelected = selectedVersion && selectedVersion.version === v.version;
+                const isCurrent = v.isCurrent;
                 
-                const isFront = selectedFront === photo.id;
-                const isBack = selectedBack === photo.id;
+                // For current version, use the actual IDs
+                // For older versions, show placeholder (we don't have their IDs stored)
+                const frontId = isCurrent ? currentFrontId : null;
+                const backId = isCurrent ? currentBackId : null;
                 
-                let cardClass = 'photo-card';
-                if (isFront) cardClass += ' selected-front';
-                if (isBack) cardClass += ' selected-back';
-
                 html += `
-                    <div class="${cardClass}" id="card-${photo.id}" data-id="${photo.id}">
-                        <div class="photo-container" onclick="openModal('${fullUrl}')">
-                            <img src="${thumbnailUrl}" alt="${filename}" loading="lazy">
-                            ${isFront ? '<span class="photo-label front">F</span>' : ''}
-                            ${isBack ? '<span class="photo-label back">B</span>' : ''}
+                    <div class="version-card ${isSelected ? 'selected' : ''} ${isCurrent ? 'current' : ''}" 
+                         onclick="selectVersion(${v.version})" 
+                         data-version="${v.version}">
+                        <div class="version-card-header">
+                            <span class="version-number">${v.label}</span>
+                            ${isCurrent ? '<span class="version-tag current">Ultima</span>' : ''}
+                            ${isSelected && !isCurrent ? '<span class="version-tag selected">Selezionata</span>' : ''}
                         </div>
-                        <div class="photo-info">
-                            <div class="photo-filename">${filename}</div>
-                            <div class="photo-actions">
-                                <button class="btn btn-front ${isFront ? 'active' : ''}" onclick="event.stopPropagation(); setFront('${photo.id}')">F</button>
-                                <button class="btn btn-back ${isBack ? 'active' : ''}" onclick="event.stopPropagation(); setBack('${photo.id}')">B</button>
+                        <div class="version-thumbs">
+                            <div class="version-thumb">
+                                ${frontId 
+                                    ? `<img src="https://drive.google.com/thumbnail?id=${frontId}&sz=w200" alt="Front">` 
+                                    : `<div class="photo-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;">F</div>`
+                                }
+                            </div>
+                            <div class="version-thumb">
+                                ${backId 
+                                    ? `<img src="https://drive.google.com/thumbnail?id=${backId}&sz=w200" alt="Back">` 
+                                    : `<div class="photo-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;">B</div>`
+                                }
                             </div>
                         </div>
                     </div>
                 `;
             });
-
+            
             html += '</div>';
-            container.innerHTML = html;
-            updateConfirmButton();
+            return html;
         }
 
-        function setFront(photoId) {
-            if (selectedFront === photoId) {
-                selectedFront = null;
-            } else {
-                selectedFront = photoId;
-                if (selectedBack === photoId) selectedBack = null;
+        function selectVersion(versionNum) {
+            const version = currentVersions.find(v => v.version === versionNum);
+            if (version) {
+                selectedVersion = version;
+                document.getElementById('viewing-version').textContent = version.label;
+                
+                // Re-render to update selection
+                renderPhotoSection(currentRecord.fields);
             }
-            renderPhotos();
-            updateSelectionStatus();
         }
 
-        function setBack(photoId) {
-            if (selectedBack === photoId) {
-                selectedBack = null;
-            } else {
-                selectedBack = photoId;
-                if (selectedFront === photoId) selectedFront = null;
-            }
-            renderPhotos();
-            updateSelectionStatus();
-        }
-
-        function updateSelectionStatus() {
-            const frontEl = document.getElementById('status-front');
-            const backEl = document.getElementById('status-back');
+        function extractDriveFileId(url) {
+            if (!url) return null;
             
-            if (selectedFront) {
-                const photo = currentPhotos.find(p => p.id === selectedFront);
-                frontEl.classList.add('selected');
-                frontEl.querySelector('.value').textContent = photo?.fields.Filename || '—';
-            } else {
-                frontEl.classList.remove('selected');
-                frontEl.querySelector('.value').textContent = '—';
-            }
-
-            if (selectedBack) {
-                const photo = currentPhotos.find(p => p.id === selectedBack);
-                backEl.classList.add('selected');
-                backEl.querySelector('.value').textContent = photo?.fields.Filename || '—';
-            } else {
-                backEl.classList.remove('selected');
-                backEl.querySelector('.value').textContent = '—';
-            }
-
-            updateConfirmButton();
+            // Handle various Google Drive URL formats
+            // Format 1: https://drive.google.com/file/d/FILE_ID/view
+            const match1 = url.match(/\/file\/d\/([^\/]+)/);
+            if (match1) return match1[1];
+            
+            // Format 2: https://drive.google.com/open?id=FILE_ID
+            const match2 = url.match(/[?&]id=([^&]+)/);
+            if (match2) return match2[1];
+            
+            // Format 3: https://drive.google.com/thumbnail?id=FILE_ID
+            const match3 = url.match(/thumbnail\?id=([^&]+)/);
+            if (match3) return match3[1];
+            
+            // Format 4: Direct file ID
+            if (url.match(/^[a-zA-Z0-9_-]{25,}$/)) return url;
+            
+            return null;
         }
 
-        function updateConfirmButton() {
-            const btn = document.getElementById('confirm-btn');
-            const aiMode = document.getElementById('ai-mode').value;
-            const template = document.getElementById('template-select').value;
+        function toggleRegenOption(type) {
+            const checkbox = document.getElementById(`regen-${type}`);
+            const box = document.getElementById(`regen-${type}-box`);
             
-            const hasPhotos = selectedFront && selectedBack;
-            const hasTemplate = aiMode !== 'FLAT' || template;
+            checkbox.checked = !checkbox.checked;
+            box.classList.toggle('checked', checkbox.checked);
             
-            btn.disabled = !(hasPhotos && hasTemplate);
+            updateRegenButton();
         }
 
-        async function confirmAndMigrate() {
-            if (!selectedFront || !selectedBack) return;
+        function updateRegenButton() {
+            const frontChecked = document.getElementById('regen-front').checked;
+            const backChecked = document.getElementById('regen-back').checked;
+            const btn = document.getElementById('btn-regenerate');
+            
+            btn.disabled = !frontChecked && !backChecked;
+            
+            if (frontChecked && backChecked) {
+                btn.textContent = '↻ Rigenera Entrambe';
+            } else if (frontChecked) {
+                btn.textContent = '↻ Rigenera FRONT';
+            } else if (backChecked) {
+                btn.textContent = '↻ Rigenera BACK';
+            } else {
+                btn.textContent = '↻ Rigenera Selezionate';
+            }
+        }
 
-            const btn = document.getElementById('confirm-btn');
+        async function approvePhotos() {
+            if (!currentRecord) return;
+            
+            const btn = document.getElementById('btn-approve');
             btn.disabled = true;
-            btn.textContent = 'Elaborazione...';
+            btn.textContent = 'Approvazione...';
 
             try {
-                const frontPhoto = currentPhotos.find(p => p.id === selectedFront);
-                const backPhoto = currentPhotos.find(p => p.id === selectedBack);
-
-                // Get form values
-                const aiMode = document.getElementById('ai-mode').value;
-                const template = document.getElementById('template-select').value;
-                const platforms = [];
-                if (document.getElementById('platform-vinted').checked) platforms.push('Vinted');
-                if (document.getElementById('platform-vestiaire').checked) platforms.push('Vestiaire');
-                if (document.getElementById('platform-catawiki').checked) platforms.push('Catawiki');
-                const notes = document.getElementById('notes').value;
-
-                // 1. Update PHOTO_CANDIDATES
-                await apiRequest(PHOTO_CANDIDATES_TABLE, {
-                    recordId: selectedFront,
+                // Update Airtable: Set AI_Quality_Check = APPROVED
+                await apiRequest(INVENTARIO_TABLE, {
+                    recordId: currentRecord.id,
                     method: 'PATCH',
-                    body: { fields: { Is_Front: true, Review_Status: 'ASSIGNED' } }
+                    body: {
+                        fields: {
+                            'AI_Quality_Check': 'APPROVED',
+                            'AI_Approved_Version': selectedVersion?.version || 1
+                        }
+                    }
                 });
-
-                await apiRequest(PHOTO_CANDIDATES_TABLE, {
-                    recordId: selectedBack,
-                    method: 'PATCH',
-                    body: { fields: { Is_Back: true, Review_Status: 'ASSIGNED' } }
-                });
-
-                for (const photo of currentPhotos) {
-                    if (photo.id !== selectedFront && photo.id !== selectedBack) {
-                        await apiRequest(PHOTO_CANDIDATES_TABLE, {
-                            recordId: photo.id,
-                            method: 'PATCH',
-                            body: { fields: { Review_Status: 'ASSIGNED' } }
-                        });
-                    }
-                }
-
-                // 2. Find and update OLD_INVENTORY with ALL migration data
-                let oldInvRecord = null;
-                let offset = null;
-                do {
-                    const data = await apiRequest(OLD_INVENTORY_TABLE, { offset });
-                    oldInvRecord = data.records.find(r => r.fields.SKU === currentSKU);
-                    if (oldInvRecord) break;
-                    offset = data.offset;
-                } while (offset);
-
-                if (oldInvRecord) {
-                    const updateFields = {
-                        Confirmed_Front_FileId: frontPhoto.fields.FileId,
-                        Confirmed_Back_FileId: backPhoto.fields.FileId,
-                        Photo_Audit_Status: 'COMPLIANT',
-                        Migration_AI_Mode: aiMode,
-                        Migration_Platforms: platforms,
-                        Ready_To_Migrate: true
-                    };
-
-                    // Add template only if FLAT mode
-                    if (aiMode === 'FLAT' && template) {
-                        updateFields.Migration_Template = template;
-                    }
-
-                    // Add notes if present
-                    if (notes) {
-                        updateFields.Migration_Notes = notes;
-                    }
-
-                    await apiRequest(OLD_INVENTORY_TABLE, {
-                        recordId: oldInvRecord.id,
-                        method: 'PATCH',
-                        body: { fields: updateFields }
-                    });
-                }
 
                 // Update local state
-                for (const photo of currentPhotos) {
-                    const idx = allRecords.findIndex(r => r.id === photo.id);
-                    if (idx !== -1) {
-                        allRecords[idx].fields.Review_Status = 'ASSIGNED';
-                    }
+                const idx = pendingRecords.findIndex(r => r.id === currentRecord.id);
+                if (idx !== -1) {
+                    pendingRecords.splice(idx, 1);
                 }
 
-                doneCount++;
-                pendingCount--;
+                stats.pending--;
+                stats.approved++;
                 updateStatsUI();
+
+                showToast(`${currentRecord.fields.SKU} approvato ✓`, 'success');
                 
-                showToast(`${currentSKU} pronto per migrazione`);
+                btn.textContent = '✓ Approva Versione';
+                btn.disabled = false;
                 
-                btn.textContent = 'Conferma';
-                loadNextSKU();
+                loadNextProduct();
 
             } catch (error) {
-                showError(error.message);
+                showToast(`Errore: ${error.message}`, 'error');
                 btn.disabled = false;
-                btn.textContent = 'Conferma';
+                btn.textContent = '✓ Approva Versione';
             }
         }
 
-        async function skipSKU() {
-            const btn = document.querySelector('.nav-btn.skip');
-            btn.textContent = 'Skipping...';
+        async function triggerRegeneration() {
+            if (!currentRecord) return;
+            
+            const frontChecked = document.getElementById('regen-front').checked;
+            const backChecked = document.getElementById('regen-back').checked;
+            
+            if (!frontChecked && !backChecked) {
+                showToast('Seleziona almeno una foto da rigenerare', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-regenerate');
+            btn.disabled = true;
+            btn.textContent = 'Invio richiesta...';
 
             try {
-                for (const photo of currentPhotos) {
-                    await apiRequest(PHOTO_CANDIDATES_TABLE, {
-                        recordId: photo.id,
-                        method: 'PATCH',
-                        body: { fields: { Review_Status: 'SKIPPED' } }
-                    });
-                    
-                    const idx = allRecords.findIndex(r => r.id === photo.id);
-                    if (idx !== -1) {
-                        allRecords[idx].fields.Review_Status = 'SKIPPED';
-                    }
+                // Determine regeneration scope
+                let regenScope = '';
+                if (frontChecked && backChecked) {
+                    regenScope = 'BOTH';
+                } else if (frontChecked) {
+                    regenScope = 'FRONT';
+                } else {
+                    regenScope = 'BACK';
                 }
 
-                pendingCount--;
+                // Update Airtable: Trigger regeneration
+                // This sets AI_Regenerate_Trigger = TRUE which W3 will pick up
+                await apiRequest(INVENTARIO_TABLE, {
+                    recordId: currentRecord.id,
+                    method: 'PATCH',
+                    body: {
+                        fields: {
+                            'AI_Quality_Check': 'REJECTED',
+                            'AI_Regenerate_Trigger': true,
+                            'AI_Regen_Scope': regenScope,
+                            'Product_Status': 'RAW_PROCESSED'
+                        }
+                    }
+                });
+
+                // Update local state
+                const idx = pendingRecords.findIndex(r => r.id === currentRecord.id);
+                if (idx !== -1) {
+                    pendingRecords.splice(idx, 1);
+                }
+
+                stats.pending--;
+                stats.regenerated++;
                 updateStatsUI();
-                showToast(`${currentSKU} skippato`, 'error');
-                btn.textContent = 'Salta SKU';
-                loadNextSKU();
+
+                showToast(`${currentRecord.fields.SKU} → rigenerazione ${regenScope} richiesta`, 'info');
+                
+                btn.textContent = '↻ Rigenera Selezionate';
+                btn.disabled = true;
+                
+                loadNextProduct();
 
             } catch (error) {
-                showError(error.message);
-                btn.textContent = 'Salta SKU';
+                showToast(`Errore: ${error.message}`, 'error');
+                btn.disabled = false;
+                updateRegenButton();
             }
+        }
+
+        async function skipProduct() {
+            if (!currentRecord) return;
+
+            // Just move to next without changing anything
+            const idx = pendingRecords.findIndex(r => r.id === currentRecord.id);
+            if (idx !== -1) {
+                // Move to end of queue
+                const skipped = pendingRecords.splice(idx, 1)[0];
+                pendingRecords.push(skipped);
+            }
+
+            showToast(`${currentRecord.fields.SKU} saltato`, 'info');
+            loadNextProduct();
+        }
+
+        function showLoading(message) {
+            document.getElementById('photo-section').innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">${message}</div>
+                </div>
+            `;
+        }
+
+        function showEmptyState() {
+            document.getElementById('current-sku').textContent = 'COMPLETATO';
+            document.getElementById('photo-section').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">✓</div>
+                    <h2 class="empty-title">QC Review Completata</h2>
+                    <p class="empty-text">Tutti i prodotti in coda sono stati verificati.</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            document.getElementById('photo-section').innerHTML = `
+                <div class="error-container">
+                    <h3 class="error-title">Errore</h3>
+                    <div class="error-message">${message}</div>
+                    <button class="btn-retry" onclick="loadPendingRecords()">Riprova</button>
+                </div>
+            `;
         }
 
         function openModal(url) {
+            if (!url) return;
             document.getElementById('modal-img').src = url;
             document.getElementById('modal').classList.add('active');
         }
@@ -1220,44 +1602,45 @@
             document.getElementById('modal').classList.remove('active');
         }
 
-        function showEmptyState() {
-            document.getElementById('current-sku').textContent = 'COMPLETATO';
-            document.getElementById('content').innerHTML = `
-                <div class="empty-state">
-                    <h2>✓ Review Completata</h2>
-                    <p>Tutti gli SKU sono stati processati.</p>
-                </div>
-            `;
-        }
-
-        function showError(message) {
-            document.getElementById('content').innerHTML = `
-                <div class="error">
-                    <h3>Errore</h3>
-                    <pre>${message}</pre>
-                    <button onclick="loadAllRecords()">Riprova</button>
-                </div>
-            `;
-        }
-
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+            if (e.target.tagName === 'INPUT') return;
             
-            if (e.key === 'Escape') closeModal();
-            
-            if (e.key === 'Enter' && !document.getElementById('confirm-btn').disabled) {
-                confirmAndMigrate();
+            switch(e.key) {
+                case 'Escape':
+                    closeModal();
+                    break;
+                case 'a':
+                case 'A':
+                    if (!document.getElementById('btn-approve').disabled) {
+                        approvePhotos();
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    if (!document.getElementById('btn-regenerate').disabled) {
+                        triggerRegeneration();
+                    }
+                    break;
+                case 'ArrowRight':
+                    skipProduct();
+                    break;
+                case 'f':
+                case 'F':
+                    toggleRegenOption('front');
+                    break;
+                case 'b':
+                case 'B':
+                    toggleRegenOption('back');
+                    break;
             }
             
-            if ((e.key === 'f' || e.key === 'F') && currentPhotos.length > 0) {
-                const hoveredCard = document.querySelector('.photo-card:hover');
-                if (hoveredCard) setFront(hoveredCard.dataset.id);
-            }
-            
-            if ((e.key === 'b' || e.key === 'B') && currentPhotos.length > 0) {
-                const hoveredCard = document.querySelector('.photo-card:hover');
-                if (hoveredCard) setBack(hoveredCard.dataset.id);
+            // Number keys for version selection
+            if (e.key >= '1' && e.key <= '9') {
+                const versionNum = parseInt(e.key);
+                if (versionNum <= currentVersions.length) {
+                    selectVersion(versionNum);
+                }
             }
         });
     </script>
