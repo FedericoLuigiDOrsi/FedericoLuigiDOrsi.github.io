@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DirtyTag - Photo QC Review</title>
+    <title>DirtyTag - Photo QC Review v2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -184,6 +184,12 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+
+        .photo-sku-tag {
+            font-size: 0.5rem;
+            color: #e31e24;
             margin-bottom: 4px;
         }
 
@@ -371,6 +377,10 @@
 
         .selection-status .item.selected .value {
             color: #4CAF50;
+        }
+
+        .selection-status .item.error .value {
+            color: #ff4444 !important;
         }
 
         .nav-buttons {
@@ -645,6 +655,35 @@
             0%, 100% { opacity: 0; }
             10%, 90% { opacity: 1; }
         }
+
+        /* Debug panel */
+        .debug-panel {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #111;
+            border: 1px solid #333;
+            padding: 10px;
+            font-size: 0.55rem;
+            color: #666;
+            max-width: 300px;
+            display: none;
+        }
+
+        .debug-panel.show {
+            display: block;
+        }
+
+        .debug-panel h4 {
+            color: #e31e24;
+            margin-bottom: 5px;
+        }
+
+        .version-tag {
+            font-size: 0.5rem;
+            color: #333;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -662,7 +701,7 @@
         <div id="main-app" style="display: none;">
             <div class="header">
                 <img src="https://raw.githubusercontent.com/FedericoLuigiDOrsi/dirtytag-system/main/assets/logo.png" alt="DirtyTag" class="logo" onerror="this.style.display='none'">
-                <h1>Photo QC + Migration</h1>
+                <h1>Photo QC + Migration <span class="version-tag">v2.1</span></h1>
                 <div class="stats">
                     <div class="stat">
                         <div class="stat-value" id="stat-pending">-</div>
@@ -794,6 +833,7 @@
                             <kbd>F</kbd> Front
                             <kbd>B</kbd> Back
                             <kbd>Enter</kbd> Conferma
+                            <kbd>D</kbd> Debug
                         </div>
                     </div>
                 </div>
@@ -810,6 +850,12 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
+    <!-- Debug Panel -->
+    <div class="debug-panel" id="debug-panel">
+        <h4>🔧 DEBUG</h4>
+        <div id="debug-content"></div>
+    </div>
+
     <script>
         // Configuration - SINGLE BASE (DirtyTag 2.0 only)
         const BASE_ID = 'apptPbWnDkDkKEpFV';
@@ -822,10 +868,14 @@
         let pendingRecords = [];
         let currentSKU = null;
         let currentPhotos = [];
-        let selectedFront = null;
-        let selectedBack = null;
+        
+        // CRITICAL FIX: Store complete selection data, not just IDs
+        let selectedFrontData = null;  // { recordId, fileId, sku, filename }
+        let selectedBackData = null;   // { recordId, fileId, sku, filename }
+        
         let pendingCount = 0;
         let doneCount = 0;
+        let debugMode = false;
 
         // Init
         window.onload = function() {
@@ -864,6 +914,28 @@
             toast.textContent = message;
             toast.className = `toast ${type} show`;
             setTimeout(() => toast.className = 'toast', 2000);
+        }
+
+        function updateDebug() {
+            if (!debugMode) return;
+            
+            const content = document.getElementById('debug-content');
+            content.innerHTML = `
+                <div>currentSKU: <b>${currentSKU || 'null'}</b></div>
+                <div>currentPhotos: ${currentPhotos.length} items</div>
+                <hr style="border-color:#333;margin:5px 0;">
+                <div>selectedFrontData:</div>
+                <div style="color:#4CAF50;">${selectedFrontData ? JSON.stringify(selectedFrontData, null, 1) : 'null'}</div>
+                <hr style="border-color:#333;margin:5px 0;">
+                <div>selectedBackData:</div>
+                <div style="color:#4CAF50;">${selectedBackData ? JSON.stringify(selectedBackData, null, 1) : 'null'}</div>
+            `;
+        }
+
+        function toggleDebug() {
+            debugMode = !debugMode;
+            document.getElementById('debug-panel').classList.toggle('show', debugMode);
+            if (debugMode) updateDebug();
         }
 
         async function apiRequest(table, options = {}) {
@@ -945,8 +1017,9 @@
         }
 
         function loadNextSKU() {
-            selectedFront = null;
-            selectedBack = null;
+            // CRITICAL: Reset selection data completely
+            selectedFrontData = null;
+            selectedBackData = null;
             updateSelectionStatus();
 
             // Reset form
@@ -958,6 +1031,7 @@
             document.getElementById('platform-catawiki').checked = true;
             document.getElementById('notes').value = '';
 
+            // Refresh pending records from allRecords
             pendingRecords = allRecords.filter(r => r.fields.Review_Status === 'PENDING');
             
             if (pendingRecords.length === 0) {
@@ -965,12 +1039,17 @@
                 return;
             }
 
+            // Get first pending SKU
             currentSKU = pendingRecords[0].fields.SKU;
             document.getElementById('current-sku').textContent = currentSKU;
 
+            // CRITICAL: Filter photos ONLY for current SKU
             currentPhotos = pendingRecords.filter(r => r.fields.SKU === currentSKU);
             
+            console.log(`[loadNextSKU] SKU: ${currentSKU}, Photos: ${currentPhotos.length}`);
+            
             renderPhotos();
+            updateDebug();
         }
 
         function renderPhotos() {
@@ -986,28 +1065,33 @@
             currentPhotos.forEach((photo, index) => {
                 const fileId = photo.fields.FileId;
                 const filename = photo.fields.Filename;
+                const photoSKU = photo.fields.SKU;
                 const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`;
                 const fullUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
                 
-                const isFront = selectedFront === photo.id;
-                const isBack = selectedBack === photo.id;
+                const isFront = selectedFrontData?.recordId === photo.id;
+                const isBack = selectedBackData?.recordId === photo.id;
                 
                 let cardClass = 'photo-card';
                 if (isFront) cardClass += ' selected-front';
                 if (isBack) cardClass += ' selected-back';
 
+                // Show SKU mismatch warning
+                const skuMismatch = photoSKU !== currentSKU;
+
                 html += `
-                    <div class="${cardClass}" id="card-${photo.id}" data-id="${photo.id}">
+                    <div class="${cardClass}" id="card-${photo.id}" data-id="${photo.id}" data-file-id="${fileId}" data-sku="${photoSKU}">
                         <div class="photo-container" onclick="openModal('${fullUrl}')">
                             <img src="${thumbnailUrl}" alt="${filename}" loading="lazy">
                             ${isFront ? '<span class="photo-label front">F</span>' : ''}
                             ${isBack ? '<span class="photo-label back">B</span>' : ''}
                         </div>
                         <div class="photo-info">
+                            ${skuMismatch ? `<div class="photo-sku-tag">⚠️ ${photoSKU}</div>` : ''}
                             <div class="photo-filename">${filename}</div>
                             <div class="photo-actions">
-                                <button class="btn btn-front ${isFront ? 'active' : ''}" onclick="event.stopPropagation(); setFront('${photo.id}')">F</button>
-                                <button class="btn btn-back ${isBack ? 'active' : ''}" onclick="event.stopPropagation(); setBack('${photo.id}')">B</button>
+                                <button class="btn btn-front ${isFront ? 'active' : ''}" onclick="event.stopPropagation(); setFront('${photo.id}', '${fileId}', '${photoSKU}', '${filename}')">F</button>
+                                <button class="btn btn-back ${isBack ? 'active' : ''}" onclick="event.stopPropagation(); setBack('${photo.id}', '${fileId}', '${photoSKU}', '${filename}')">B</button>
                             </div>
                         </div>
                     </div>
@@ -1019,47 +1103,84 @@
             updateConfirmButton();
         }
 
-        function setFront(photoId) {
-            if (selectedFront === photoId) {
-                selectedFront = null;
+        // CRITICAL FIX: Store complete data, not just ID
+        function setFront(recordId, fileId, sku, filename) {
+            if (selectedFrontData?.recordId === recordId) {
+                // Deselect
+                selectedFrontData = null;
             } else {
-                selectedFront = photoId;
-                if (selectedBack === photoId) selectedBack = null;
+                // Select with full data
+                selectedFrontData = {
+                    recordId: recordId,
+                    fileId: fileId,
+                    sku: sku,
+                    filename: filename
+                };
+                // Clear back if same photo
+                if (selectedBackData?.recordId === recordId) {
+                    selectedBackData = null;
+                }
             }
+            
+            console.log(`[setFront] Selected:`, selectedFrontData);
+            
             renderPhotos();
             updateSelectionStatus();
+            updateDebug();
         }
 
-        function setBack(photoId) {
-            if (selectedBack === photoId) {
-                selectedBack = null;
+        function setBack(recordId, fileId, sku, filename) {
+            if (selectedBackData?.recordId === recordId) {
+                // Deselect
+                selectedBackData = null;
             } else {
-                selectedBack = photoId;
-                if (selectedFront === photoId) selectedFront = null;
+                // Select with full data
+                selectedBackData = {
+                    recordId: recordId,
+                    fileId: fileId,
+                    sku: sku,
+                    filename: filename
+                };
+                // Clear front if same photo
+                if (selectedFrontData?.recordId === recordId) {
+                    selectedFrontData = null;
+                }
             }
+            
+            console.log(`[setBack] Selected:`, selectedBackData);
+            
             renderPhotos();
             updateSelectionStatus();
+            updateDebug();
         }
 
         function updateSelectionStatus() {
             const frontEl = document.getElementById('status-front');
             const backEl = document.getElementById('status-back');
             
-            if (selectedFront) {
-                const photo = currentPhotos.find(p => p.id === selectedFront);
+            // Front status
+            if (selectedFrontData) {
+                const skuMatch = selectedFrontData.sku === currentSKU;
                 frontEl.classList.add('selected');
-                frontEl.querySelector('.value').textContent = photo?.fields.Filename || '—';
+                frontEl.classList.toggle('error', !skuMatch);
+                frontEl.querySelector('.value').textContent = skuMatch 
+                    ? selectedFrontData.filename 
+                    : `⚠️ ${selectedFrontData.sku}`;
             } else {
-                frontEl.classList.remove('selected');
+                frontEl.classList.remove('selected', 'error');
                 frontEl.querySelector('.value').textContent = '—';
             }
 
-            if (selectedBack) {
-                const photo = currentPhotos.find(p => p.id === selectedBack);
+            // Back status
+            if (selectedBackData) {
+                const skuMatch = selectedBackData.sku === currentSKU;
                 backEl.classList.add('selected');
-                backEl.querySelector('.value').textContent = photo?.fields.Filename || '—';
+                backEl.classList.toggle('error', !skuMatch);
+                backEl.querySelector('.value').textContent = skuMatch 
+                    ? selectedBackData.filename 
+                    : `⚠️ ${selectedBackData.sku}`;
             } else {
-                backEl.classList.remove('selected');
+                backEl.classList.remove('selected', 'error');
                 backEl.querySelector('.value').textContent = '—';
             }
 
@@ -1071,22 +1192,57 @@
             const aiMode = document.getElementById('ai-mode').value;
             const template = document.getElementById('template-select').value;
             
-            const hasPhotos = selectedFront && selectedBack;
+            const hasPhotos = selectedFrontData && selectedBackData;
             const hasTemplate = aiMode !== 'FLAT' || template;
             
-            btn.disabled = !(hasPhotos && hasTemplate);
+            // CRITICAL: Validate SKU match
+            const frontSkuMatch = selectedFrontData?.sku === currentSKU;
+            const backSkuMatch = selectedBackData?.sku === currentSKU;
+            const skuValid = frontSkuMatch && backSkuMatch;
+            
+            btn.disabled = !(hasPhotos && hasTemplate && skuValid);
+            
+            // Update button text if SKU mismatch
+            if (hasPhotos && !skuValid) {
+                btn.textContent = '⚠️ SKU Mismatch';
+            } else {
+                btn.textContent = 'Conferma';
+            }
         }
 
         async function confirmAndMigrate() {
-            if (!selectedFront || !selectedBack) return;
+            // CRITICAL VALIDATION
+            if (!selectedFrontData || !selectedBackData) {
+                showToast('Seleziona FRONT e BACK', 'error');
+                return;
+            }
+
+            // Double-check SKU match
+            if (selectedFrontData.sku !== currentSKU) {
+                showToast(`ERRORE: Front photo è di ${selectedFrontData.sku}, non ${currentSKU}`, 'error');
+                console.error('SKU MISMATCH - Front:', selectedFrontData, 'Expected:', currentSKU);
+                return;
+            }
+
+            if (selectedBackData.sku !== currentSKU) {
+                showToast(`ERRORE: Back photo è di ${selectedBackData.sku}, non ${currentSKU}`, 'error');
+                console.error('SKU MISMATCH - Back:', selectedBackData, 'Expected:', currentSKU);
+                return;
+            }
 
             const btn = document.getElementById('confirm-btn');
             btn.disabled = true;
             btn.textContent = 'Elaborazione...';
 
             try {
-                const frontPhoto = currentPhotos.find(p => p.id === selectedFront);
-                const backPhoto = currentPhotos.find(p => p.id === selectedBack);
+                // Log for audit
+                console.log('=== CONFIRM & MIGRATE ===');
+                console.log('currentSKU:', currentSKU);
+                console.log('Front FileId:', selectedFrontData.fileId);
+                console.log('Front SKU:', selectedFrontData.sku);
+                console.log('Back FileId:', selectedBackData.fileId);
+                console.log('Back SKU:', selectedBackData.sku);
+                console.log('=========================');
 
                 // Get form values
                 const aiMode = document.getElementById('ai-mode').value;
@@ -1099,19 +1255,20 @@
 
                 // 1. Update PHOTO_CANDIDATES
                 await apiRequest(PHOTO_CANDIDATES_TABLE, {
-                    recordId: selectedFront,
+                    recordId: selectedFrontData.recordId,
                     method: 'PATCH',
                     body: { fields: { Is_Front: true, Review_Status: 'ASSIGNED' } }
                 });
 
                 await apiRequest(PHOTO_CANDIDATES_TABLE, {
-                    recordId: selectedBack,
+                    recordId: selectedBackData.recordId,
                     method: 'PATCH',
                     body: { fields: { Is_Back: true, Review_Status: 'ASSIGNED' } }
                 });
 
+                // Mark other photos for this SKU as ASSIGNED
                 for (const photo of currentPhotos) {
-                    if (photo.id !== selectedFront && photo.id !== selectedBack) {
+                    if (photo.id !== selectedFrontData.recordId && photo.id !== selectedBackData.recordId) {
                         await apiRequest(PHOTO_CANDIDATES_TABLE, {
                             recordId: photo.id,
                             method: 'PATCH',
@@ -1132,8 +1289,9 @@
 
                 if (oldInvRecord) {
                     const updateFields = {
-                        Confirmed_Front_FileId: frontPhoto.fields.FileId,
-                        Confirmed_Back_FileId: backPhoto.fields.FileId,
+                        // CRITICAL: Use FileId from selectedFrontData/selectedBackData
+                        Confirmed_Front_FileId: selectedFrontData.fileId,
+                        Confirmed_Back_FileId: selectedBackData.fileId,
                         Photo_Audit_Status: 'COMPLIANT',
                         Migration_AI_Mode: aiMode,
                         Migration_Platforms: platforms,
@@ -1150,11 +1308,15 @@
                         updateFields.Migration_Notes = notes;
                     }
 
+                    console.log('Updating OLD_INVENTORY with:', updateFields);
+
                     await apiRequest(OLD_INVENTORY_TABLE, {
                         recordId: oldInvRecord.id,
                         method: 'PATCH',
                         body: { fields: updateFields }
                     });
+                } else {
+                    console.warn(`OLD_INVENTORY record not found for SKU: ${currentSKU}`);
                 }
 
                 // Update local state
@@ -1246,18 +1408,32 @@
             
             if (e.key === 'Escape') closeModal();
             
+            if (e.key === 'd' || e.key === 'D') toggleDebug();
+            
             if (e.key === 'Enter' && !document.getElementById('confirm-btn').disabled) {
                 confirmAndMigrate();
             }
             
             if ((e.key === 'f' || e.key === 'F') && currentPhotos.length > 0) {
                 const hoveredCard = document.querySelector('.photo-card:hover');
-                if (hoveredCard) setFront(hoveredCard.dataset.id);
+                if (hoveredCard) {
+                    const id = hoveredCard.dataset.id;
+                    const fileId = hoveredCard.dataset.fileId;
+                    const sku = hoveredCard.dataset.sku;
+                    const filename = hoveredCard.querySelector('.photo-filename').textContent;
+                    setFront(id, fileId, sku, filename);
+                }
             }
             
             if ((e.key === 'b' || e.key === 'B') && currentPhotos.length > 0) {
                 const hoveredCard = document.querySelector('.photo-card:hover');
-                if (hoveredCard) setBack(hoveredCard.dataset.id);
+                if (hoveredCard) {
+                    const id = hoveredCard.dataset.id;
+                    const fileId = hoveredCard.dataset.fileId;
+                    const sku = hoveredCard.dataset.sku;
+                    const filename = hoveredCard.querySelector('.photo-filename').textContent;
+                    setBack(id, fileId, sku, filename);
+                }
             }
         });
     </script>
