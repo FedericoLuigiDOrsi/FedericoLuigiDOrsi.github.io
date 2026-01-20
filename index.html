@@ -617,18 +617,18 @@
             cursor: pointer;
             border: 2px solid transparent;
             transition: all 0.2s;
+            user-select: none;
         }
         
         .skip-reason:hover {
             border-color: var(--border-light);
+            background: var(--black-soft);
         }
         
         .skip-reason.selected {
             border-color: var(--red);
             background: var(--red-muted);
         }
-        
-        .skip-reason input[type="radio"] { display: none; }
         
         .skip-reason .radio-custom {
             width: 18px;
@@ -640,6 +640,10 @@
             justify-content: center;
             flex-shrink: 0;
             transition: all 0.2s;
+        }
+        
+        .skip-reason:hover .radio-custom {
+            border-color: var(--beige-muted);
         }
         
         .skip-reason.selected .radio-custom {
@@ -891,41 +895,36 @@
     </div>
 
     <!-- SKIP MODAL -->
-    <div class="modal-overlay" id="skipModal">
+    <div class="modal-overlay" id="skipModal" onclick="if(event.target === this) closeSkipModal()">
         <div class="modal">
             <h2>❌ Scarta Prodotto</h2>
             <p class="modal-sku">SKU: <strong id="skipModalSku"></strong></p>
-            <div class="skip-reasons">
-                <label class="skip-reason" onclick="selectSkipReason(this,'TOO_FEW_PHOTOS')">
-                    <input type="radio" name="skipReason">
+            <div class="skip-reasons" id="skipReasonsList">
+                <div class="skip-reason" data-reason="TOO_FEW_PHOTOS">
                     <span class="radio-custom"></span>
                     <span>📷 Troppe poche foto</span>
-                </label>
-                <label class="skip-reason" onclick="selectSkipReason(this,'NO_INTERNAL_LABELS')">
-                    <input type="radio" name="skipReason">
+                </div>
+                <div class="skip-reason" data-reason="NO_INTERNAL_LABELS">
                     <span class="radio-custom"></span>
                     <span>🏷️ No etichette interne</span>
-                </label>
-                <label class="skip-reason" onclick="selectSkipReason(this,'LOW_QUALITY_PHOTOS')">
-                    <input type="radio" name="skipReason">
+                </div>
+                <div class="skip-reason" data-reason="LOW_QUALITY_PHOTOS">
                     <span class="radio-custom"></span>
                     <span>📸 Foto bassa qualità</span>
-                </label>
-                <label class="skip-reason" onclick="selectSkipReason(this,'MISSING_FRONT_BACK')">
-                    <input type="radio" name="skipReason">
+                </div>
+                <div class="skip-reason" data-reason="MISSING_FRONT_BACK">
                     <span class="radio-custom"></span>
                     <span>🔄 Front/Back mancante</span>
-                </label>
-                <label class="skip-reason" onclick="selectSkipReason(this,'OTHER')">
-                    <input type="radio" name="skipReason">
+                </div>
+                <div class="skip-reason" data-reason="OTHER">
                     <span class="radio-custom"></span>
                     <span>📝 Altro</span>
-                </label>
+                </div>
             </div>
             <textarea class="skip-notes" id="skipNotes" placeholder="Note aggiuntive (opzionale)..."></textarea>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeSkipModal()">Annulla</button>
-                <button class="btn btn-danger" id="confirmSkipBtn" onclick="confirmSkip()" disabled>Conferma</button>
+                <button class="btn btn-danger" id="confirmSkipBtn" disabled>Conferma Skip</button>
             </div>
         </div>
     </div>
@@ -1054,6 +1053,13 @@
                 // Build filter
                 let formula = `AND({${F.PHOTO_COUNT}}>0`;
                 if (status) formula += `,{${F.PHOTO_AUDIT_STATUS}}='${status}'`;
+                
+                // FIX: Se filtro per NEEDS_REVIEW, escludi record con Front/Back già confermati
+                if (status === 'NEEDS_REVIEW') {
+                    formula += `,{${F.CONFIRMED_FRONT}}=''`;
+                    formula += `,{${F.CONFIRMED_BACK}}=''`;
+                }
+                
                 formula += ')';
                 
                 log(`🔍 Filter: ${formula}`);
@@ -1492,20 +1498,24 @@
                 toast(`✅ ${currentSKU} approvato`, 'success');
                 log(`✅ ${currentSKU} saved successfully`);
                 
-                // Remove from local array and advance
-                records.splice(idx, 1);
-                // Also update allRecords for accurate stats
+                // FIX: Update status in allRecords (for accurate stats) instead of removing
                 const allIdx = allRecords.findIndex(r => r.id === currentRecordId);
-                if (allIdx >= 0) allRecords.splice(allIdx, 1);
+                if (allIdx >= 0) {
+                    allRecords[allIdx].fields[F.PHOTO_AUDIT_STATUS] = 'COMPLIANT';
+                }
+                
+                // Remove only from filtered records array
+                records.splice(idx, 1);
                 
                 if (idx >= records.length) idx = Math.max(0, records.length - 1);
+                
+                updateStats();
                 
                 if (records.length) {
                     await showRecord();
                 } else {
                     showEmpty();
                 }
-                updateStats();
                 
             } catch (e) {
                 log(`❌ Save error: ${e.message}`);
@@ -1520,6 +1530,29 @@
         // ═══════════════════════════════════════════════════════════════
         // SKIP MODAL
         // ═══════════════════════════════════════════════════════════════
+        function initSkipModal() {
+            // Event delegation for skip reasons
+            const reasonsList = document.getElementById('skipReasonsList');
+            if (reasonsList) {
+                reasonsList.addEventListener('click', (e) => {
+                    const reasonEl = e.target.closest('.skip-reason');
+                    if (reasonEl) {
+                        const reason = reasonEl.dataset.reason;
+                        selectSkipReason(reasonEl, reason);
+                    }
+                });
+            }
+            
+            // Confirm button
+            const confirmBtn = document.getElementById('confirmSkipBtn');
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', confirmSkip);
+            }
+        }
+        
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', initSkipModal);
+
         function openSkipModal() {
             if (isProcessing) return;
             document.getElementById('skipModalSku').textContent = currentSKU;
@@ -1539,6 +1572,7 @@
             el.classList.add('selected');
             skipReason = reason;
             document.getElementById('confirmSkipBtn').disabled = false;
+            log(`📋 Skip reason selected: ${reason}`);
         }
 
         async function confirmSkip() {
@@ -1576,19 +1610,24 @@
                 toast(`❌ ${currentSKU} scartato`, 'warning');
                 log(`✅ ${currentSKU} skipped`);
                 
-                // Remove from arrays
-                records.splice(idx, 1);
+                // FIX: Update status in allRecords (for accurate stats) instead of removing
                 const allIdx = allRecords.findIndex(r => r.id === currentRecordId);
-                if (allIdx >= 0) allRecords.splice(allIdx, 1);
+                if (allIdx >= 0) {
+                    allRecords[allIdx].fields[F.PHOTO_AUDIT_STATUS] = 'SKIPPED';
+                }
+                
+                // Remove only from filtered records array
+                records.splice(idx, 1);
                 
                 if (idx >= records.length) idx = Math.max(0, records.length - 1);
+                
+                updateStats();
                 
                 if (records.length) {
                     await showRecord();
                 } else {
                     showEmpty();
                 }
-                updateStats();
                 
             } catch (e) {
                 log(`❌ Skip error: ${e.message}`);
