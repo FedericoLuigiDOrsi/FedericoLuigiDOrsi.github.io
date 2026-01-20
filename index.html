@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DirtyTag - Photo QC v7</title>
+    <title>DirtyTag - Photo QC v7.1</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -118,10 +118,11 @@
             flex-shrink: 0;
         }
 
+        /* FOTO PIÙ GRANDI: 5-6 per riga */
         .photo-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
         }
 
         .photo-card {
@@ -131,6 +132,7 @@
             transition: all 0.15s;
             cursor: pointer;
             border-radius: 4px;
+            position: relative;
         }
 
         .photo-card:hover {
@@ -153,6 +155,7 @@
             width: 100%;
             padding-top: 100%;
             background: #0a0a0a;
+            overflow: hidden;
         }
 
         .photo-container img {
@@ -162,6 +165,18 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        /* Rotazione foto */
+        .photo-container img.rotate-90 {
+            transform: rotate(90deg);
+        }
+        .photo-container img.rotate-180 {
+            transform: rotate(180deg);
+        }
+        .photo-container img.rotate-270 {
+            transform: rotate(270deg);
         }
 
         .photo-label {
@@ -173,6 +188,7 @@
             font-weight: 700;
             letter-spacing: 1px;
             border-radius: 2px;
+            z-index: 10;
         }
 
         .photo-label.front {
@@ -185,9 +201,38 @@
             color: #000;
         }
 
+        /* Bottone Rotazione */
+        .rotate-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 28px;
+            height: 28px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            z-index: 20;
+        }
+
+        .photo-card:hover .rotate-btn {
+            opacity: 1;
+        }
+
+        .rotate-btn:hover {
+            background: rgba(227, 30, 36, 0.8);
+        }
+
         .photo-filename {
-            padding: 6px;
-            font-size: 0.6rem;
+            padding: 8px;
+            font-size: 0.65rem;
             color: #666;
             text-align: center;
             white-space: nowrap;
@@ -573,7 +618,7 @@
 <body>
     <!-- Login Screen -->
     <div id="login-screen" class="login-screen">
-        <h2>DIRTYTAG PHOTO QC v7</h2>
+        <h2>DIRTYTAG PHOTO QC v7.1</h2>
         <input type="password" id="api-token" placeholder="Airtable API Token">
         <button onclick="login()">Accedi</button>
     </div>
@@ -582,7 +627,7 @@
     <div id="app" style="display: none;">
         <div class="header">
             <h1>PHOTO QC</h1>
-            <div class="version-badge">v7 • BATCH MODE • MANI ONLY</div>
+            <div class="version-badge">v7.1 • BATCH MODE • MANI ONLY</div>
             <div class="sku-badge" id="current-sku">---</div>
             <div class="ai-mode-badge">🤖 AI MODE: MANI</div>
             <div class="product-info" id="product-info"></div>
@@ -687,6 +732,7 @@
                     <div class="keyboard-hints">
                         <span class="key-hint"><kbd>F</kbd> Front</span>
                         <span class="key-hint"><kbd>B</kbd> Back</span>
+                        <span class="key-hint"><kbd>R</kbd> Ruota</span>
                         <span class="key-hint"><kbd>1</kbd> No Front</span>
                         <span class="key-hint"><kbd>2</kbd> No Back</span>
                         <span class="key-hint"><kbd>3</kbd> Rifare</span>
@@ -717,7 +763,7 @@
         const OLD_INVENTORY_TABLE = 'tblddAcLcQAyk050u';
         
         const BATCH_SIZE = 50;
-        const AI_MODE = 'MANI'; // Hardcoded as per requirements
+        const AI_MODE = 'MANI';
         const DEFAULT_PLATFORMS = ['Vinted', 'Vestiaire', 'Catawiki'];
 
         // ============================================
@@ -737,6 +783,12 @@
         let selectedBack = null;
         let selectedFrontData = null;
         let selectedBackData = null;
+        
+        // Rotation state per photo (photoId -> rotation degrees)
+        let photoRotations = {};
+        
+        // Last hovered photo for keyboard rotation
+        let lastHoveredPhotoId = null;
         
         let flags = {
             missingFront: false,
@@ -834,7 +886,6 @@
             showLoading();
             
             try {
-                // Load all PENDING photo candidates
                 allRecords = [];
                 let offset = null;
                 
@@ -849,7 +900,6 @@
                     offset = data.offset;
                 } while (offset);
 
-                // Get unique SKUs and organize into batches
                 const skuSet = new Set(allRecords.map(r => r.fields.SKU));
                 const allSKUs = Array.from(skuSet);
                 
@@ -880,7 +930,7 @@
             
             batchSKUs = allSKUs.slice(start, end);
             currentBatchIndex = batchIndex;
-            totalBatches = Math.ceil(allSKUs.length / BATCH_SIZE);
+            totalBatches = Math.ceil(allSKUs.length / BATCH_SIZE) || 1;
             currentSKUIndex = 0;
             batchDoneCount = 0;
 
@@ -919,11 +969,12 @@
             currentSKU = sku;
             currentPhotos = allRecords.filter(r => r.fields.SKU === sku && r.fields.Review_Status === 'PENDING');
             
-            // Reset selection
             selectedFront = null;
             selectedBack = null;
             selectedFrontData = null;
             selectedBackData = null;
+            photoRotations = {};
+            lastHoveredPhotoId = null;
             resetFlags();
 
             document.getElementById('current-sku').textContent = sku;
@@ -938,11 +989,38 @@
             currentSKUIndex++;
             batchDoneCount++;
             
-            if (currentSKUIndex < batchSKUs.length) {
-                loadSKU(batchSKUs[currentSKUIndex]);
-            } else if (currentBatchIndex < totalBatches - 1) {
+            // Recalculate batchSKUs from remaining PENDING records
+            const remainingSKUs = new Set(
+                allRecords
+                    .filter(r => r.fields.Review_Status === 'PENDING')
+                    .map(r => r.fields.SKU)
+            );
+            
+            // Find next SKU in current batch that's still pending
+            let nextSKU = null;
+            for (let i = currentSKUIndex; i < batchSKUs.length; i++) {
+                if (remainingSKUs.has(batchSKUs[i])) {
+                    nextSKU = batchSKUs[i];
+                    currentSKUIndex = i;
+                    break;
+                }
+            }
+            
+            if (nextSKU) {
+                loadSKU(nextSKU);
+            } else if (remainingSKUs.size > 0) {
+                // Current batch exhausted but more SKUs exist
                 showToast('Batch completato! Carico il prossimo...', 'success');
-                setTimeout(() => loadNextBatch(), 1000);
+                setTimeout(() => {
+                    // Rebuild batches from remaining SKUs
+                    const allRemainingSKUs = Array.from(remainingSKUs);
+                    totalBatches = Math.ceil(allRemainingSKUs.length / BATCH_SIZE) || 1;
+                    currentBatchIndex = 0;
+                    batchSKUs = allRemainingSKUs.slice(0, BATCH_SIZE);
+                    currentSKUIndex = 0;
+                    updateBatchNav();
+                    loadSKU(batchSKUs[0]);
+                }, 500);
             } else {
                 showEmptyState();
                 showToast('🎉 Tutti gli SKU completati!', 'success');
@@ -979,16 +1057,33 @@
                     labelHtml = '<div class="photo-label back">BACK</div>';
                 }
 
+                // Get rotation class
+                const rotation = photoRotations[photo.id] || 0;
+                let rotateClass = '';
+                if (rotation === 90) rotateClass = 'rotate-90';
+                else if (rotation === 180) rotateClass = 'rotate-180';
+                else if (rotation === 270) rotateClass = 'rotate-270';
+
                 return `
-                    <div class="${cardClass}" data-id="${photo.id}" data-index="${index}" onclick="handlePhotoClick('${photo.id}', '${fileId}')" ondblclick="openModal('${fullUrl}')">
+                    <div class="${cardClass}" data-id="${photo.id}" data-index="${index}" 
+                         onclick="handlePhotoClick('${photo.id}', '${fileId}')" 
+                         ondblclick="openModal('${fullUrl}')"
+                         onmouseenter="lastHoveredPhotoId='${photo.id}'">
                         <div class="photo-container">
-                            <img src="${thumbnailUrl}" alt="${filename}" loading="lazy">
+                            <img src="${thumbnailUrl}" alt="${filename}" loading="lazy" class="${rotateClass}">
                             ${labelHtml}
+                            <button class="rotate-btn" onclick="event.stopPropagation(); rotatePhoto('${photo.id}')" title="Ruota 90°">🔄</button>
                         </div>
                         <div class="photo-filename">${filename}</div>
                     </div>
                 `;
             }).join('');
+        }
+
+        function rotatePhoto(photoId) {
+            const currentRotation = photoRotations[photoId] || 0;
+            photoRotations[photoId] = (currentRotation + 90) % 360;
+            renderPhotos();
         }
 
         function showLoading() {
@@ -1008,6 +1103,7 @@
                 </div>
             `;
             document.getElementById('current-sku').textContent = '---';
+            document.getElementById('batch-progress').textContent = '0/0';
         }
 
         // ============================================
@@ -1017,12 +1113,10 @@
             const photo = currentPhotos.find(p => p.id === recordId);
             if (!photo) return;
 
-            // If nothing selected, set as FRONT
             if (!selectedFront) {
                 selectedFront = recordId;
                 selectedFrontData = { recordId, fileId };
             }
-            // If FRONT selected, clicking same deselects, clicking other sets as BACK
             else if (selectedFront === recordId) {
                 selectedFront = null;
                 selectedFrontData = null;
@@ -1031,12 +1125,10 @@
                 selectedBack = recordId;
                 selectedBackData = { recordId, fileId };
             }
-            // If BACK selected, clicking same deselects
             else if (selectedBack === recordId) {
                 selectedBack = null;
                 selectedBackData = null;
             }
-            // Both selected, clicking either resets that one
             else if (selectedFront === recordId) {
                 selectedFront = null;
                 selectedFrontData = null;
@@ -1052,17 +1144,10 @@
         }
 
         function selectAsFront() {
-            // Find first unselected photo
             const unselected = currentPhotos.find(p => p.id !== selectedFront && p.id !== selectedBack);
             if (unselected) {
-                if (selectedFront) {
-                    // Replace current front
-                    selectedFront = unselected.id;
-                    selectedFrontData = { recordId: unselected.id, fileId: unselected.fields.FileId };
-                } else {
-                    selectedFront = unselected.id;
-                    selectedFrontData = { recordId: unselected.id, fileId: unselected.fields.FileId };
-                }
+                selectedFront = unselected.id;
+                selectedFrontData = { recordId: unselected.id, fileId: unselected.fields.FileId };
                 renderPhotos();
                 updateSelectionStatus();
                 updateConfirmButton();
@@ -1072,13 +1157,8 @@
         function selectAsBack() {
             const unselected = currentPhotos.find(p => p.id !== selectedFront && p.id !== selectedBack);
             if (unselected) {
-                if (selectedBack) {
-                    selectedBack = unselected.id;
-                    selectedBackData = { recordId: unselected.id, fileId: unselected.fields.FileId };
-                } else {
-                    selectedBack = unselected.id;
-                    selectedBackData = { recordId: unselected.id, fileId: unselected.fields.FileId };
-                }
+                selectedBack = unselected.id;
+                selectedBackData = { recordId: unselected.id, fileId: unselected.fields.FileId };
                 renderPhotos();
                 updateSelectionStatus();
                 updateConfirmButton();
@@ -1113,7 +1193,6 @@
             
             btn.disabled = !hasSelection && !hasFlags;
             
-            // Show/hide flag submit button
             const flagBtn = document.getElementById('flag-btn');
             if (hasFlags && !hasSelection) {
                 flagBtn.style.display = 'block';
@@ -1168,7 +1247,6 @@
             btn.textContent = '⏳ Salvando...';
 
             try {
-                // 1. Update PHOTO_CANDIDATES
                 if (selectedFront) {
                     await apiRequest(PHOTO_CANDIDATES_TABLE, {
                         recordId: selectedFront,
@@ -1185,7 +1263,6 @@
                     });
                 }
 
-                // Mark other photos as ASSIGNED
                 for (const photo of currentPhotos) {
                     if (photo.id !== selectedFront && photo.id !== selectedBack) {
                         await apiRequest(PHOTO_CANDIDATES_TABLE, {
@@ -1196,7 +1273,6 @@
                     }
                 }
 
-                // 2. Find and update OLD_INVENTORY
                 let oldInvRecord = null;
                 let offset = null;
                 do {
@@ -1216,7 +1292,6 @@
                         Ready_To_Migrate: true
                     };
 
-                    // Include any active flags
                     if (flags.missingFront) updateFields.Flag_Missing_Front = true;
                     if (flags.missingBack) updateFields.Flag_Missing_Back = true;
                     if (flags.needsReshoot) updateFields.Flag_Needs_Reshoot = true;
@@ -1249,6 +1324,8 @@
                 
                 btn.textContent = '✓ Conferma & Prossimo';
                 btn.disabled = false;
+                
+                // Advance to next SKU
                 loadNextSKU();
 
             } catch (error) {
@@ -1300,6 +1377,7 @@
                         body: { fields: { Review_Status: 'FLAGGED' } }
                     });
                     
+                    // Update local state
                     const idx = allRecords.findIndex(r => r.id === photo.id);
                     if (idx !== -1) {
                         allRecords[idx].fields.Review_Status = 'FLAGGED';
@@ -1319,6 +1397,8 @@
                 
                 btn.textContent = '⚠️ Segnala & Prossimo';
                 btn.disabled = false;
+                
+                // FIXED: Advance to next SKU
                 loadNextSKU();
 
             } catch (error) {
@@ -1393,7 +1473,6 @@
         // KEYBOARD SHORTCUTS
         // ============================================
         document.addEventListener('keydown', (e) => {
-            // Ignore if typing in input
             if (e.target.tagName === 'INPUT') return;
 
             switch(e.key.toLowerCase()) {
@@ -1402,6 +1481,14 @@
                     break;
                 case 'b':
                     selectAsBack();
+                    break;
+                case 'r':
+                    // Rotate last hovered photo, or first photo if none hovered
+                    if (lastHoveredPhotoId) {
+                        rotatePhoto(lastHoveredPhotoId);
+                    } else if (currentPhotos.length > 0) {
+                        rotatePhoto(currentPhotos[0].id);
+                    }
                     break;
                 case '1':
                     toggleFlag('missingFront');
