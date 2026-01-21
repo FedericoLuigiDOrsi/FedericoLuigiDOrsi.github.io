@@ -617,18 +617,18 @@
             cursor: pointer;
             border: 2px solid transparent;
             transition: all 0.2s;
-            user-select: none;
         }
         
         .skip-reason:hover {
             border-color: var(--border-light);
-            background: var(--black-soft);
         }
         
         .skip-reason.selected {
             border-color: var(--red);
             background: var(--red-muted);
         }
+        
+        .skip-reason input[type="radio"] { display: none; }
         
         .skip-reason .radio-custom {
             width: 18px;
@@ -640,10 +640,6 @@
             justify-content: center;
             flex-shrink: 0;
             transition: all 0.2s;
-        }
-        
-        .skip-reason:hover .radio-custom {
-            border-color: var(--beige-muted);
         }
         
         .skip-reason.selected .radio-custom {
@@ -895,36 +891,41 @@
     </div>
 
     <!-- SKIP MODAL -->
-    <div class="modal-overlay" id="skipModal" onclick="if(event.target === this) closeSkipModal()">
+    <div class="modal-overlay" id="skipModal">
         <div class="modal">
             <h2>❌ Scarta Prodotto</h2>
             <p class="modal-sku">SKU: <strong id="skipModalSku"></strong></p>
-            <div class="skip-reasons" id="skipReasonsList">
-                <div class="skip-reason" data-reason="TOO_FEW_PHOTOS">
+            <div class="skip-reasons">
+                <label class="skip-reason" onclick="selectSkipReason(this,'TOO_FEW_PHOTOS')">
+                    <input type="radio" name="skipReason">
                     <span class="radio-custom"></span>
                     <span>📷 Troppe poche foto</span>
-                </div>
-                <div class="skip-reason" data-reason="NO_INTERNAL_LABELS">
+                </label>
+                <label class="skip-reason" onclick="selectSkipReason(this,'NO_INTERNAL_LABELS')">
+                    <input type="radio" name="skipReason">
                     <span class="radio-custom"></span>
                     <span>🏷️ No etichette interne</span>
-                </div>
-                <div class="skip-reason" data-reason="LOW_QUALITY_PHOTOS">
+                </label>
+                <label class="skip-reason" onclick="selectSkipReason(this,'LOW_QUALITY_PHOTOS')">
+                    <input type="radio" name="skipReason">
                     <span class="radio-custom"></span>
                     <span>📸 Foto bassa qualità</span>
-                </div>
-                <div class="skip-reason" data-reason="MISSING_FRONT_BACK">
+                </label>
+                <label class="skip-reason" onclick="selectSkipReason(this,'MISSING_FRONT_BACK')">
+                    <input type="radio" name="skipReason">
                     <span class="radio-custom"></span>
                     <span>🔄 Front/Back mancante</span>
-                </div>
-                <div class="skip-reason" data-reason="OTHER">
+                </label>
+                <label class="skip-reason" onclick="selectSkipReason(this,'OTHER')">
+                    <input type="radio" name="skipReason">
                     <span class="radio-custom"></span>
                     <span>📝 Altro</span>
-                </div>
+                </label>
             </div>
             <textarea class="skip-notes" id="skipNotes" placeholder="Note aggiuntive (opzionale)..."></textarea>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeSkipModal()">Annulla</button>
-                <button class="btn btn-danger" id="confirmSkipBtn" disabled>Conferma Skip</button>
+                <button class="btn btn-danger" id="confirmSkipBtn" onclick="confirmSkip()" disabled>Conferma</button>
             </div>
         </div>
     </div>
@@ -1053,13 +1054,6 @@
                 // Build filter
                 let formula = `AND({${F.PHOTO_COUNT}}>0`;
                 if (status) formula += `,{${F.PHOTO_AUDIT_STATUS}}='${status}'`;
-                
-                // FIX: Se filtro per NEEDS_REVIEW, escludi record con Front/Back già confermati
-                if (status === 'NEEDS_REVIEW') {
-                    formula += `,{${F.CONFIRMED_FRONT}}=''`;
-                    formula += `,{${F.CONFIRMED_BACK}}=''`;
-                }
-                
                 formula += ')';
                 
                 log(`🔍 Filter: ${formula}`);
@@ -1476,8 +1470,9 @@
                 log(`💾 Saving ${currentSKU}: front=${front.fields.FileId}, back=${back.fields.FileId}, mode=${mode}`);
                 
                 // Update PHOTO_CANDIDATES
-                await update(PHOTO_CANDIDATES_TABLE, selFront, { Is_Front: true, Review_Status: 'ASSIGNED' });
-                await update(PHOTO_CANDIDATES_TABLE, selBack, { Is_Back: true, Review_Status: 'ASSIGNED' });
+                // FIX: Checkbox fields need 1 (integer) not true (boolean)
+                await update(PHOTO_CANDIDATES_TABLE, selFront, { Is_Front: 1, Review_Status: 'ASSIGNED' });
+                await update(PHOTO_CANDIDATES_TABLE, selBack, { Is_Back: 1, Review_Status: 'ASSIGNED' });
                 
                 // Mark other photos as assigned
                 for (const p of photos) {
@@ -1487,35 +1482,32 @@
                 }
                 
                 // Update RAW_INVENTORY
+                // FIX: Checkbox fields need 1 (integer) not true (boolean)
                 await update(RAW_INVENTORY_TABLE, currentRecordId, {
                     [F.CONFIRMED_FRONT]: front.fields.FileId,
                     [F.CONFIRMED_BACK]: back.fields.FileId,
                     [F.PHOTO_AUDIT_STATUS]: 'COMPLIANT',
                     [F.MIGRATION_AI_MODE]: mode,
-                    [F.READY_TO_MIGRATE]: true
+                    [F.READY_TO_MIGRATE]: 1          // Checkbox: 1 = checked
                 });
                 
                 toast(`✅ ${currentSKU} approvato`, 'success');
                 log(`✅ ${currentSKU} saved successfully`);
                 
-                // FIX: Update status in allRecords (for accurate stats) instead of removing
-                const allIdx = allRecords.findIndex(r => r.id === currentRecordId);
-                if (allIdx >= 0) {
-                    allRecords[allIdx].fields[F.PHOTO_AUDIT_STATUS] = 'COMPLIANT';
-                }
-                
-                // Remove only from filtered records array
+                // Remove from local array and advance
                 records.splice(idx, 1);
+                // Also update allRecords for accurate stats
+                const allIdx = allRecords.findIndex(r => r.id === currentRecordId);
+                if (allIdx >= 0) allRecords.splice(allIdx, 1);
                 
                 if (idx >= records.length) idx = Math.max(0, records.length - 1);
-                
-                updateStats();
                 
                 if (records.length) {
                     await showRecord();
                 } else {
                     showEmpty();
                 }
+                updateStats();
                 
             } catch (e) {
                 log(`❌ Save error: ${e.message}`);
@@ -1530,29 +1522,6 @@
         // ═══════════════════════════════════════════════════════════════
         // SKIP MODAL
         // ═══════════════════════════════════════════════════════════════
-        function initSkipModal() {
-            // Event delegation for skip reasons
-            const reasonsList = document.getElementById('skipReasonsList');
-            if (reasonsList) {
-                reasonsList.addEventListener('click', (e) => {
-                    const reasonEl = e.target.closest('.skip-reason');
-                    if (reasonEl) {
-                        const reason = reasonEl.dataset.reason;
-                        selectSkipReason(reasonEl, reason);
-                    }
-                });
-            }
-            
-            // Confirm button
-            const confirmBtn = document.getElementById('confirmSkipBtn');
-            if (confirmBtn) {
-                confirmBtn.addEventListener('click', confirmSkip);
-            }
-        }
-        
-        // Initialize on DOM ready
-        document.addEventListener('DOMContentLoaded', initSkipModal);
-
         function openSkipModal() {
             if (isProcessing) return;
             document.getElementById('skipModalSku').textContent = currentSKU;
@@ -1572,7 +1541,6 @@
             el.classList.add('selected');
             skipReason = reason;
             document.getElementById('confirmSkipBtn').disabled = false;
-            log(`📋 Skip reason selected: ${reason}`);
         }
 
         async function confirmSkip() {
@@ -1594,40 +1562,37 @@
                 }
                 
                 // Update RAW_INVENTORY with reset
+                // FIX: Single Select fields need '' (empty string) not null
+                // FIX: Checkbox fields need 0/1 (integer) not true/false (boolean)
                 await update(RAW_INVENTORY_TABLE, currentRecordId, {
                     [F.CONFIRMED_FRONT]: '',
                     [F.CONFIRMED_BACK]: '',
                     [F.PHOTO_AUDIT_STATUS]: 'SKIPPED',
-                    [F.MIGRATION_AI_MODE]: null,
-                    [F.READY_TO_MIGRATE]: false,
+                    [F.MIGRATION_AI_MODE]: '',       // Single Select: stringa vuota per reset
+                    [F.READY_TO_MIGRATE]: 0,         // Checkbox: 0 = unchecked
                     [F.SKIP_REASON]: skipReason,
                     [F.SKIP_NOTES]: notes,
                     [F.SKIPPED_AT]: new Date().toISOString(),
-                    [F.REQUIRES_RESHOOT]: true
+                    [F.REQUIRES_RESHOOT]: 1          // Checkbox: 1 = checked
                 });
                 
                 closeSkipModal();
                 toast(`❌ ${currentSKU} scartato`, 'warning');
                 log(`✅ ${currentSKU} skipped`);
                 
-                // FIX: Update status in allRecords (for accurate stats) instead of removing
-                const allIdx = allRecords.findIndex(r => r.id === currentRecordId);
-                if (allIdx >= 0) {
-                    allRecords[allIdx].fields[F.PHOTO_AUDIT_STATUS] = 'SKIPPED';
-                }
-                
-                // Remove only from filtered records array
+                // Remove from arrays
                 records.splice(idx, 1);
+                const allIdx = allRecords.findIndex(r => r.id === currentRecordId);
+                if (allIdx >= 0) allRecords.splice(allIdx, 1);
                 
                 if (idx >= records.length) idx = Math.max(0, records.length - 1);
-                
-                updateStats();
                 
                 if (records.length) {
                     await showRecord();
                 } else {
                     showEmpty();
                 }
+                updateStats();
                 
             } catch (e) {
                 log(`❌ Skip error: ${e.message}`);
