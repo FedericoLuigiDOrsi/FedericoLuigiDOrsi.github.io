@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🛃 Dogana Import — DirtyTag Photo QC v9</title>
+    <title>🛃 Dogana Import — DirtyTag Photo QC v10</title>
     <style>
         :root {
             --black: #0D0D0D;
@@ -32,7 +32,6 @@
             line-height: 1.5;
         }
 
-        /* HEADER */
         .header {
             background: var(--black-soft);
             padding: 1rem 2rem;
@@ -69,7 +68,6 @@
             font-weight: 600;
         }
 
-        /* STATS BAR */
         .stats-bar {
             display: flex;
             gap: 1.5rem;
@@ -104,7 +102,6 @@
         .stat.warning .stat-value { color: var(--warning); }
         .stat.pending .stat-value { color: var(--red); }
 
-        /* BUTTONS */
         .btn-icon {
             background: var(--black);
             border: 1px solid var(--border);
@@ -122,7 +119,6 @@
             background: var(--red-muted);
         }
 
-        /* FILTERS */
         .filters-section {
             background: var(--black-soft);
             padding: 1rem 2rem;
@@ -165,7 +161,6 @@
             outline: none;
         }
 
-        /* PAGINATION */
         .pagination {
             display: flex;
             align-items: center;
@@ -204,7 +199,6 @@
             font-weight: 500;
         }
 
-        /* TOKEN SECTION */
         .token-section {
             padding: 3rem 2rem;
             text-align: center;
@@ -259,14 +253,12 @@
             background: var(--red-hover);
         }
 
-        /* MAIN CONTENT */
         .main-content {
             padding: 1.5rem 2rem;
             max-width: 1400px;
             margin: 0 auto;
         }
 
-        /* PRODUCT CARD */
         .product-card {
             background: var(--black-card);
             border-radius: 12px;
@@ -313,10 +305,9 @@
             color: var(--warning);
         }
 
-        /* PHOTO GRID */
         .photo-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -352,6 +343,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transition: transform 0.3s ease;
         }
         
         .photo-label {
@@ -364,6 +356,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            z-index: 10;
         }
         
         .photo-label.front {
@@ -379,7 +372,7 @@
         .photo-index {
             position: absolute;
             top: 8px;
-            right: 8px;
+            right: 40px;
             width: 24px;
             height: 24px;
             background: rgba(0,0,0,0.7);
@@ -390,6 +383,34 @@
             font-size: 0.7rem;
             font-weight: 600;
             color: var(--white-muted);
+            z-index: 10;
+        }
+        
+        /* ROTATE BUTTON - v10 NEW */
+        .photo-rotate {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 28px;
+            height: 28px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: var(--white-muted);
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.2s;
+        }
+        
+        .photo-rotate:hover {
+            background: var(--red);
+            color: var(--white);
+            border-color: var(--red);
+            transform: scale(1.1);
         }
         
         .photo-filename {
@@ -407,7 +428,6 @@
             white-space: nowrap;
         }
 
-        /* SELECTION CONTROLS */
         .selection-controls {
             display: flex;
             gap: 1.5rem;
@@ -473,7 +493,6 @@
             cursor: pointer;
         }
 
-        /* ACTION BUTTONS */
         .action-buttons {
             display: flex;
             gap: 1rem;
@@ -530,7 +549,6 @@
             background: var(--black-soft);
         }
 
-        /* KEYBOARD HINTS */
         .keyboard-hints {
             display: flex;
             gap: 1.2rem;
@@ -559,7 +577,6 @@
             text-align: center;
         }
 
-        /* MODALS */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -663,7 +680,6 @@
             justify-content: flex-end;
         }
 
-        /* ZOOM MODAL */
         .zoom-modal {
             display: none;
             position: fixed;
@@ -686,7 +702,6 @@
             object-fit: contain;
         }
 
-        /* LOADING */
         .loading {
             text-align: center;
             padding: 3rem;
@@ -707,7 +722,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* EMPTY STATE */
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
@@ -720,7 +734,6 @@
             color: var(--white);
         }
 
-        /* NO PHOTOS WARNING */
         .no-photos-warning {
             text-align: center;
             padding: 3rem;
@@ -730,7 +743,6 @@
             color: var(--warning);
         }
 
-        /* DEBUG PANEL */
         .debug-panel {
             background: #111;
             border: 1px solid var(--border);
@@ -745,8 +757,11 @@
         }
         
         .debug-panel.hidden { display: none; }
+        
+        .debug-panel .error { color: #ff6b6b; }
+        .debug-panel .success { color: var(--success); }
+        .debug-panel .warn { color: var(--warning); }
 
-        /* TOAST */
         .toast {
             position: fixed;
             bottom: 2rem;
@@ -781,7 +796,6 @@
             color: var(--black);
         }
 
-        /* RESPONSIVE */
         @media (max-width: 768px) {
             .header { padding: 1rem; }
             .stats-bar { gap: 0.8rem; }
@@ -789,7 +803,7 @@
             .stat-value { font-size: 1.1rem; }
             .filters-section { padding: 1rem; }
             .main-content { padding: 1rem; }
-            .photo-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .photo-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
         }
     </style>
 </head>
@@ -805,7 +819,7 @@
         <header class="header">
             <div class="header-brand">
                 <h1>🛃 Dogana Import</h1>
-                <span class="version">v9</span>
+                <span class="version">v10</span>
             </div>
             <div class="stats-bar">
                 <div class="stat pending">
@@ -921,15 +935,15 @@
 
     <script>
         // ═══════════════════════════════════════════════════════════════
-        // CONFIG — v9 FIX: Usa nomi tabella invece di Table ID
+        // CONFIG — v10 FIX CRITICO: Nome tabella corretto!
         // ═══════════════════════════════════════════════════════════════
         const BASE_ID = 'apptPbWnDkDkKEpFV';  // DirtyTag 2.0
         
-        // FIX v9: Usa NOMI tabella (API Airtable li accetta)
-        const RAW_INVENTORY_TABLE = 'RAW_INVENTORY';      // Nome tabella corretto
-        const PHOTO_CANDIDATES_TABLE = 'PHOTO_CANDIDATES'; // Nome tabella corretto
+        // v10 FIX: La tabella si chiama OLD_INVENTORY, non RAW_INVENTORY!
+        const OLD_INVENTORY_TABLE = 'OLD_INVENTORY';
+        const PHOTO_CANDIDATES_TABLE = 'PHOTO_CANDIDATES';
 
-        // Field Names — v9 FIX: Allineati con schema documentazione
+        // Field Names — allineati con schema documentazione
         const F = {
             SKU: 'SKU',
             CATEGORY: 'Category',
@@ -940,7 +954,7 @@
             PHOTO_COUNT: 'Photo_Count',
             CONFIRMED_FRONT: 'Confirmed_Front_FileId',
             CONFIRMED_BACK: 'Confirmed_Back_FileId',
-            MIGRATION_AI_MODE: 'Migration_AI_Mode',        // Corretto per DirtyTag 2.0
+            MIGRATION_AI_MODE: 'Migration_AI_Mode',
             MIGRATION_TEMPLATE: 'Migration_Template',
             MIGRATION_STATUS: 'Migration_Status',
             READY_TO_MIGRATE: 'Ready_To_Migrate',
@@ -967,6 +981,9 @@
         let hoveredPhoto = null;
         let debugMode = false;
         let isProcessing = false;
+        
+        // v10 NEW: Rotazione foto (stato locale)
+        let photoRotations = {};  // { photoId: degrees }
 
         // ═══════════════════════════════════════════════════════════════
         // INIT
@@ -1011,12 +1028,12 @@
             document.getElementById('debugPanel').classList.toggle('hidden', !debugMode);
         }
 
-        function log(m) {
+        function log(m, type = '') {
             console.log(m);
             const p = document.getElementById('debugPanel');
             if (p) {
                 const ts = new Date().toLocaleTimeString();
-                p.innerHTML += `<div>[${ts}] ${m}</div>`;
+                p.innerHTML += `<div class="${type}">[${ts}] ${m}</div>`;
                 p.scrollTop = p.scrollHeight;
             }
         }
@@ -1036,9 +1053,10 @@
                 formula += ')';
                 
                 log(`🔍 Filter: ${formula}`);
+                log(`📡 Table: ${OLD_INVENTORY_TABLE}`);
                 
                 allRecords = await fetchAllRecords(formula);
-                log(`✅ Loaded ${allRecords.length} total records`);
+                log(`✅ Loaded ${allRecords.length} total records`, 'success');
                 
                 records = [...allRecords];
                 const catFilter = document.getElementById('filterCategory')?.value;
@@ -1074,7 +1092,7 @@
                 }
                 
             } catch (e) {
-                log(`❌ ${e.message}`);
+                log(`❌ ${e.message}`, 'error');
                 showError(e.message);
             }
             showLoading(false);
@@ -1085,12 +1103,10 @@
             let offset = null;
             
             do {
-                // v9: Usa encodeURIComponent per il nome tabella
-                let url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(RAW_INVENTORY_TABLE)}?pageSize=100`;
+                // v10: Usa OLD_INVENTORY_TABLE
+                let url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(OLD_INVENTORY_TABLE)}?pageSize=100`;
                 url += `&filterByFormula=${encodeURIComponent(formula)}`;
                 if (offset) url += `&offset=${offset}`;
-                
-                log(`📡 Fetching: ${RAW_INVENTORY_TABLE}`);
                 
                 const res = await fetch(url, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -1098,7 +1114,7 @@
                 
                 if (!res.ok) {
                     const err = await res.json();
-                    log(`❌ API Error: ${JSON.stringify(err)}`);
+                    log(`❌ API Error: ${JSON.stringify(err)}`, 'error');
                     throw new Error(`${res.status}: ${err.error?.message || 'Error'}`);
                 }
                 
@@ -1106,7 +1122,7 @@
                 all = all.concat(data.records || []);
                 offset = data.offset;
                 
-                if (offset) log(`📄 Loaded page, offset: ${offset.substring(0,10)}...`);
+                if (offset) log(`📄 Loaded page, total so far: ${all.length}`);
                 
             } while (offset);
             
@@ -1180,6 +1196,9 @@
             currentRecordId = r.id;
             currentSKU = r.fields[F.SKU];
             
+            // v10: Reset rotazioni per nuovo SKU
+            photoRotations = {};
+            
             log(`📦 Loading: ${currentSKU}`);
             updateStats();
             
@@ -1200,7 +1219,6 @@
 
         async function loadPhotos(sku, invRecord) {
             try {
-                // v9: Usa encodeURIComponent per il nome tabella
                 const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(PHOTO_CANDIDATES_TABLE)}?filterByFormula=${encodeURIComponent(`{SKU}='${sku}'`)}`;
                 const res = await fetch(url, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -1228,7 +1246,7 @@
                 renderCard(invRecord);
                 
             } catch (e) {
-                log(`❌ Photos error: ${e.message}`);
+                log(`❌ Photos error: ${e.message}`, 'error');
                 toast('Errore caricamento foto', 'error');
             }
         }
@@ -1255,6 +1273,10 @@
                     const thumb = `https://drive.google.com/thumbnail?id=${fid}&sz=w400`;
                     const full = `https://drive.google.com/uc?id=${fid}`;
                     
+                    // v10: Rotazione
+                    const rotation = photoRotations[p.id] || 0;
+                    const rotateStyle = rotation ? `transform: rotate(${rotation}deg)` : '';
+                    
                     let label = '', cls = '';
                     if (p.id === selFront) {
                         label = '<span class="photo-label front">FRONT</span>';
@@ -1273,7 +1295,8 @@
                              ondblclick="openZoom('${full}')">
                             ${label}
                             <span class="photo-index">${i + 1}</span>
-                            <img src="${thumb}" onerror="this.style.background='var(--black)'">
+                            <button class="photo-rotate" onclick="event.stopPropagation(); rotatePhoto('${p.id}')" title="Ruota 90°">🔄</button>
+                            <img src="${thumb}" style="${rotateStyle}" onerror="this.style.background='var(--black)'">
                             <span class="photo-filename">${fn}</span>
                         </div>`;
                 }).join('');
@@ -1330,14 +1353,33 @@
                     <div class="keyboard-hints">
                         <span><kbd>F</kbd> Front</span>
                         <span><kbd>B</kbd> Back</span>
+                        <span><kbd>R</kbd> Ruota</span>
                         <span><kbd>Enter</kbd> Approva</span>
                         <span><kbd>S</kbd> Scarta</span>
                         <span><kbd>N</kbd> Salta</span>
-                        <span><kbd>Esc</kbd> Chiudi</span>
                     </div>
                 </div>`;
             
             updateConfirmBtn();
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // PHOTO ROTATION — v10 NEW
+        // ═══════════════════════════════════════════════════════════════
+        function rotatePhoto(photoId) {
+            const current = photoRotations[photoId] || 0;
+            photoRotations[photoId] = (current + 90) % 360;
+            
+            // Aggiorna solo l'immagine specifica
+            const photoItem = document.querySelector(`.photo-item[data-id="${photoId}"]`);
+            if (photoItem) {
+                const img = photoItem.querySelector('img');
+                if (img) {
+                    img.style.transform = `rotate(${photoRotations[photoId]}deg)`;
+                }
+            }
+            
+            log(`🔄 Rotated ${photoId} to ${photoRotations[photoId]}°`);
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -1347,7 +1389,7 @@
             if (isProcessing) return;
             
             if (!photos.find(p => p.id === id)) {
-                log(`⚠️ Invalid photo ID: ${id}`);
+                log(`⚠️ Invalid photo ID: ${id}`, 'warn');
                 return;
             }
             
@@ -1419,7 +1461,7 @@
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // CONFIRM APPROVE — v9 FIX: Boolean per checkbox
+        // CONFIRM APPROVE
         // ═══════════════════════════════════════════════════════════════
         async function confirmApprove() {
             if (!selFront || !selBack || isProcessing) return;
@@ -1429,7 +1471,7 @@
             
             if (!front || !back) {
                 toast('Errore: selezione non valida', 'error');
-                log(`❌ Invalid selection - front: ${!!front}, back: ${!!back}`);
+                log(`❌ Invalid selection - front: ${!!front}, back: ${!!back}`, 'error');
                 return;
             }
             
@@ -1444,13 +1486,13 @@
                 
                 log(`💾 Saving ${currentSKU}: front=${front.fields.FileId}, back=${back.fields.FileId}, mode=${mode}`);
                 
-                // v9 FIX: Checkbox usa BOOLEAN true/false, non integer 1/0
+                // Update PHOTO_CANDIDATES
                 await update(PHOTO_CANDIDATES_TABLE, selFront, { 
-                    Is_Front: true,           // ✅ Boolean
+                    Is_Front: true,
                     Review_Status: 'ASSIGNED' 
                 });
                 await update(PHOTO_CANDIDATES_TABLE, selBack, { 
-                    Is_Back: true,            // ✅ Boolean
+                    Is_Back: true,
                     Review_Status: 'ASSIGNED' 
                 });
                 
@@ -1460,17 +1502,17 @@
                     }
                 }
                 
-                // v9 FIX: Checkbox usa BOOLEAN true/false
-                await update(RAW_INVENTORY_TABLE, currentRecordId, {
+                // Update OLD_INVENTORY (v10 fix: nome tabella corretto)
+                await update(OLD_INVENTORY_TABLE, currentRecordId, {
                     [F.CONFIRMED_FRONT]: front.fields.FileId,
                     [F.CONFIRMED_BACK]: back.fields.FileId,
                     [F.PHOTO_AUDIT_STATUS]: 'COMPLIANT',
                     [F.MIGRATION_AI_MODE]: mode,
-                    [F.READY_TO_MIGRATE]: true    // ✅ Boolean
+                    [F.READY_TO_MIGRATE]: true
                 });
                 
                 toast(`✅ ${currentSKU} approvato`, 'success');
-                log(`✅ ${currentSKU} saved successfully`);
+                log(`✅ ${currentSKU} saved successfully`, 'success');
                 
                 records.splice(idx, 1);
                 const allIdx = allRecords.findIndex(r => r.id === currentRecordId);
@@ -1486,7 +1528,7 @@
                 updateStats();
                 
             } catch (e) {
-                log(`❌ Save error: ${e.message}`);
+                log(`❌ Save error: ${e.message}`, 'error');
                 toast('Errore salvataggio', 'error');
                 btn.disabled = false;
                 btn.textContent = originalText;
@@ -1519,7 +1561,7 @@
             document.getElementById('confirmSkipBtn').disabled = false;
         }
 
-        // v9 FIX: Boolean per checkbox, null per reset Single Select
+        // v10 FIX: Skip con error handling migliorato
         async function confirmSkip() {
             if (!skipReason || isProcessing) return;
             
@@ -1533,28 +1575,35 @@
                 
                 log(`🗑️ Skipping ${currentSKU}: reason=${skipReason}`);
                 
+                // Step 1: Delete photos from PHOTO_CANDIDATES
+                log(`📸 Deleting ${photos.length} photos...`);
                 for (const p of photos) {
-                    await del(PHOTO_CANDIDATES_TABLE, p.id);
+                    try {
+                        await del(PHOTO_CANDIDATES_TABLE, p.id);
+                        log(`  ✓ Deleted photo ${p.id.substring(0,10)}...`);
+                    } catch (delErr) {
+                        log(`  ⚠️ Failed to delete photo: ${delErr.message}`, 'warn');
+                        // Continua comunque
+                    }
                 }
                 
-                // v9 FIX: 
-                // - Single Select: null per clear (non stringa vuota)
-                // - Checkbox: false per uncheck (non 0)
-                await update(RAW_INVENTORY_TABLE, currentRecordId, {
-                    [F.CONFIRMED_FRONT]: null,          // Text: null per clear
-                    [F.CONFIRMED_BACK]: null,           // Text: null per clear
+                // Step 2: Update OLD_INVENTORY (v10 fix: nome tabella corretto)
+                log(`📝 Updating ${OLD_INVENTORY_TABLE}...`);
+                await update(OLD_INVENTORY_TABLE, currentRecordId, {
+                    [F.CONFIRMED_FRONT]: null,
+                    [F.CONFIRMED_BACK]: null,
                     [F.PHOTO_AUDIT_STATUS]: 'SKIPPED',
-                    [F.MIGRATION_AI_MODE]: null,        // Single Select: null per clear
-                    [F.READY_TO_MIGRATE]: false,        // ✅ Boolean false
+                    [F.MIGRATION_AI_MODE]: null,
+                    [F.READY_TO_MIGRATE]: false,
                     [F.SKIP_REASON]: skipReason,
-                    [F.SKIP_NOTES]: notes,
+                    [F.SKIP_NOTES]: notes || null,
                     [F.SKIPPED_AT]: new Date().toISOString(),
-                    [F.REQUIRES_RESHOOT]: true          // ✅ Boolean true
+                    [F.REQUIRES_RESHOOT]: true
                 });
                 
                 closeSkipModal();
                 toast(`❌ ${currentSKU} scartato`, 'warning');
-                log(`✅ ${currentSKU} skipped`);
+                log(`✅ ${currentSKU} skipped successfully`, 'success');
                 
                 records.splice(idx, 1);
                 const allIdx = allRecords.findIndex(r => r.id === currentRecordId);
@@ -1570,8 +1619,8 @@
                 updateStats();
                 
             } catch (e) {
-                log(`❌ Skip error: ${e.message}`);
-                toast('Errore durante skip', 'error');
+                log(`❌ Skip error: ${e.message}`, 'error');
+                toast(`Errore: ${e.message}`, 'error');
                 btn.disabled = false;
                 btn.textContent = 'Conferma';
             } finally {
@@ -1590,7 +1639,7 @@
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // API HELPERS — v9: URL encoding per nomi tabella
+        // API HELPERS
         // ═══════════════════════════════════════════════════════════════
         async function update(table, id, fields) {
             const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${id}`;
@@ -1607,15 +1656,17 @@
             
             if (!res.ok) {
                 const err = await res.json();
-                log(`❌ Update failed: ${JSON.stringify(err)}`);
-                throw new Error(err.error?.message || 'Update failed');
+                const errMsg = err.error?.message || JSON.stringify(err);
+                log(`❌ PATCH failed: ${errMsg}`, 'error');
+                throw new Error(errMsg);
             }
+            
+            log(`  ✓ PATCH success`, 'success');
             return res.json();
         }
 
         async function del(table, id) {
             const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(table)}/${id}`;
-            log(`🗑️ DELETE ${table}/${id.substring(0,10)}...`);
             
             const res = await fetch(url, {
                 method: 'DELETE',
@@ -1624,13 +1675,13 @@
             
             if (!res.ok) {
                 const err = await res.json();
-                log(`❌ Delete failed: ${JSON.stringify(err)}`);
-                throw new Error(err.error?.message || 'Delete failed');
+                const errMsg = err.error?.message || JSON.stringify(err);
+                throw new Error(errMsg);
             }
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // KEYBOARD SHORTCUTS
+        // KEYBOARD SHORTCUTS — v10: Added R for rotate
         // ═══════════════════════════════════════════════════════════════
         function handleKey(e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -1642,6 +1693,10 @@
                     break;
                 case 'b':
                     if (hoveredPhoto) setBack(hoveredPhoto);
+                    break;
+                case 'r':
+                    // v10: Ruota foto sotto il mouse
+                    if (hoveredPhoto) rotatePhoto(hoveredPhoto);
                     break;
                 case 'enter':
                     if (selFront && selBack) confirmApprove();
